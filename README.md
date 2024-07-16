@@ -10,35 +10,34 @@
 
 ## 使用
 
-#### 配置文件说明
+### 配置说明
 
-完整配置示例:
+- 完整yaml配置示例:
 
 ```yaml
 
 ```
 
-#### 环境变量说明
+- 环境变量配置说明
 
-- A
-
-- B
-
-- C
-
-<hr/>
-
-### Docker
-
-```shell
-docker run -dit -v $PWD/config.yaml:/etc/oss-auto-cert/config.yaml ghcr.io/nekoimi/oss-auto-cert:latest
+```html
+A
+B
+C
 ```
 
-### Systemd
+### Docker部署（推荐）
 
-推荐以服务方式管理
+最新稳定版本容器镜像: `ghcr.io/nekoimi/oss-auto-cert:latest`
 
-- 从 [`release`](releases) 下载稳定版
+```shell
+# 运行例子:
+docker run -d -v $PWD/config.yaml:/etc/oss-auto-cert/config.yaml ghcr.io/nekoimi/oss-auto-cert:latest
+```
+
+### Systemd部署
+
+- 从 [`release`](releases) 下载稳定版可执行文件
 
 - 添加 `oss-auto-cert.service` 配置
 
