@@ -2,15 +2,18 @@ package main
 
 import (
 	"fmt"
-	"github.com/alibabacloud-go/alibabacloud-gateway-spi/client"
-	"github.com/aws/aws-sdk-go-v2/credentials"
+	"time"
 )
 
 func main() {
-	credentials.NewStaticCredentialsProvider("", "", "")
-	_, err := client.NewClient()
-	if err != nil {
-		panic(err)
+	//credentials.NewStaticCredentialsProvider("", "", "")
+	//_, err := client.NewClient()
+	//if err != nil {
+	//	panic(err)
+	//}
+	//fmt.Println("hello")
+
+	for range time.Tick(3 * time.Second) {
+		fmt.Println(time.Now())
 	}
-	fmt.Println("hello")
 }
