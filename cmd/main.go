@@ -1,19 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"time"
+	"flag"
+	"github.com/nekoimi/oss-auto-cert/internal/cert"
+	"github.com/nekoimi/oss-auto-cert/internal/config"
 )
 
-func main() {
-	//credentials.NewStaticCredentialsProvider("", "", "")
-	//_, err := client.NewClient()
-	//if err != nil {
-	//	panic(err)
-	//}
-	//fmt.Println("hello")
+var autoCertConf = new(config.Config)
 
-	for range time.Tick(3 * time.Second) {
-		fmt.Println(time.Now())
-	}
+func init() {
+	flag.StringVar(&autoCertConf.Path, "config-path", "/etc/oss-auto-cert/config.yaml", "配置文件路径")
+}
+
+func main() {
+	flag.Parse()
+
+	cert.Run(autoCertConf)
 }
