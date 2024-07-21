@@ -1,5 +1,7 @@
 # 阿里云OSS配置
-oss:
-  a: a
-acme:
-  email: ""
+buckets:
+  - name: fsdfsd
+    region: fsdfsdf
+
+  - name: fdasda2
+    region: fsdfsadf2
