@@ -56,7 +56,7 @@ func (ac *AutoCert) CertRun() {
 	ac.certRunning.Store(true)
 	defer ac.certRunning.Store(false)
 
-	for _, bucket := range ac.conf.Options.Buckets {
+	for _, bucket := range ac.conf.Buckets {
 		ac.bucketCart(bucket)
 	}
 }
