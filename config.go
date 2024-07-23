@@ -17,21 +17,21 @@ type Config struct {
 	// 默认路径: DefaultConfigPath
 	Path string
 	// Acme配置
-	Acme Acme `yaml:"acme,omitempty"`
+	Acme Acme `yaml:"acme"`
 	// Bucket配置
-	Buckets []Bucket `yaml:"buckets,omitempty"`
+	Buckets []Bucket `yaml:"buckets"`
 }
 
 type Acme struct {
-	Email string `yaml:"email,omitempty"`
+	Email string `yaml:"email"`
 }
 
 // Bucket OSS存储Bucket配置
 type Bucket struct {
 	// bucket名称
-	Name string `yaml:"name,omitempty"`
-	// 地域
-	Region string `yaml:"region,omitempty"`
+	Name string `yaml:"name"`
+	// Endpoint
+	Endpoint string `yaml:"endpoint"`
 }
 
 // LoadOptions 加载配置
