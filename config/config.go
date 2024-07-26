@@ -26,7 +26,6 @@ type Acme struct {
 	Email string `yaml:"email"`
 
 	// 证书保存位置
-	// 保存路径格式: {DataDir}/{bucket}/{cname}/{yyyy-MM-dd}/
 	DataDir string `yaml:"data-dir"`
 }
 

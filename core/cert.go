@@ -40,7 +40,7 @@ func New(conf *config.Config) *CertManager {
 		conf:        conf,
 
 		credentials: credentialsProvider.GetCredentials(),
-		lego:        acme.NewLego(conf.Acme.Email),
+		lego:        acme.NewLego(conf.Acme),
 	}
 }
 
@@ -64,7 +64,7 @@ func Run(conf *config.Config) {
 
 	ac := New(conf)
 	ac.Init()
-	
+
 	//tick := time.NewTicker(3 * time.Second)
 	//for {
 	//	select {
