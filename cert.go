@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto"
+	"fmt"
 	cas20200407 "github.com/alibabacloud-go/cas-20200407/v2/client"
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	"github.com/alibabacloud-go/tea/tea"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -72,17 +74,18 @@ func Run(conf *Config) {
 
 	signal.Notify(ac.signalChan, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	tick := time.NewTicker(3 * time.Second)
-	for {
-		select {
-		case <-ac.signalChan:
-			tick.Stop()
-			log.Println("Exit.")
-			os.Exit(0)
-		case <-tick.C:
-			go ac.CertRun()
-		}
-	}
+	//tick := time.NewTicker(3 * time.Second)
+	//for {
+	//	select {
+	//	case <-ac.signalChan:
+	//		tick.Stop()
+	//		log.Println("Exit.")
+	//		os.Exit(0)
+	//	case <-tick.C:
+	//		go ac.CertRun()
+	//	}
+	//}
+	ac.CertRun()
 }
 
 func (ac *AutoCert) CertRun() {
@@ -139,18 +142,33 @@ func (ac *AutoCert) handleBucketCname(bucket Bucket, cname oss.Cname) {
 	log.Printf("证书信息: ValidEndDate-%s\n", certificate.ValidEndDate)
 
 	// 根据证书ID查询证书信息
-	certID := certificate.CertId
-	log.Printf("证书ID: %s\n", certID)
+	casID := certificate.CertId
+	// 123456789-cn-hangzhou
+	log.Printf("证书ID: %s\n", casID)
+	certID := stringSplitFirst(casID, "-")
 	request := new(cas20200407.GetUserCertificateDetailRequest)
 	certIDInt64, _ := strconv.ParseInt(certID, 10, 64)
 	request.SetCertId(certIDInt64)
-	details, err := ac.casClient.GetUserCertificateDetail(request)
+	resp, err := ac.casClient.GetUserCertificateDetail(request)
 	if err != nil {
 		log.Printf("获取证书详情异常: CertId-%s, %s\n", certID, err.Error())
 		return
 	}
 
+	if *resp.StatusCode != 200 {
+		log.Printf("获取证书详情异常: StatusCode-%d, %s\n", resp.StatusCode, resp)
+		return
+	}
+
+	details := resp.Body
 	log.Printf("证书详情: %s\n", details)
+
+	// 证书已经过期或者还有3天过期
+	if *details.Expired || dateIsExpire(*details.EndDate, time.Hour*24*3) {
+		// 申请证书 替换新证书
+		log.Printf("域名(%s)证书过期，更换新证书\n", cname.Domain)
+
+	}
 }
 
 type RegistrationUser struct {
@@ -169,4 +187,38 @@ func (u RegistrationUser) GetRegistration() *registration.Resource {
 
 func (u *RegistrationUser) GetPrivateKey() crypto.PrivateKey {
 	return u.key
+}
+
+func stringSplitFirst(s string, sep string) string {
+	for _, item := range strings.SplitN(s, sep, 2) {
+		return item
+	}
+	return s
+}
+
+// 是否过期
+// aheadHours 提前过期小时数
+func dateIsExpire(dateStr string, aheadHours time.Duration) bool {
+	now := time.Now()
+	// yyyy-MM-dd
+	timeFormat := "2006-01-02"
+	target, err := time.Parse(timeFormat, dateStr)
+	if err != nil {
+		log.Printf("日期解析异常: %s, %s\n", dateStr, err.Error())
+		return false
+	}
+
+	if target.Before(now) {
+		// 当前时间比目标时间晚 => 过期
+		// 当前时间：2024-07-26 目标时间：2024-07-25
+		return true
+	}
+
+	// 目标时间比当前时间晚
+	// 获取当前时间到目标时间的剩余小时数
+	diff := target.Sub(now)
+	fmt.Printf("diff: %f, ahead: %f \n", diff.Hours(), aheadHours.Hours())
+	// 剩余小时数是否小于提前过期小时数
+	// 如果小于 => 提前过期
+	return diff.Hours() < aheadHours.Hours()
 }

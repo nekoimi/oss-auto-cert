@@ -23,3 +23,6 @@ go.work.sum
 
 # Idea
 .idea
+
+dev.yaml
+certs

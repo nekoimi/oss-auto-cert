@@ -9,7 +9,6 @@ import (
 
 const (
 	DefaultConfigPath = "/etc/oss-auto-cert/config.yaml"
-	PathEnv           = "OSS_AUTO_CERT_CONFIG"
 )
 
 type Config struct {
@@ -23,7 +22,12 @@ type Config struct {
 }
 
 type Acme struct {
+	// 证书申请邮箱
 	Email string `yaml:"email"`
+
+	// 证书保存位置
+	// 保存路径格式: {DataDir}/{bucket}/{cname}/{yyyy-MM-dd}/
+	DataDir string `yaml:"data-dir"`
 }
 
 // Bucket OSS存储Bucket配置
@@ -36,15 +40,8 @@ type Bucket struct {
 
 // LoadOptions 加载配置
 func (conf *Config) LoadOptions() {
-	//conf.loadAccessKey()
-
 	if conf.Path == "" {
-		// 检查环境变量配置
-		if value, ok := os.LookupEnv(PathEnv); ok {
-			conf.Path = value
-		} else {
-			conf.Path = DefaultConfigPath
-		}
+		conf.Path = DefaultConfigPath
 	}
 
 	f, err := os.Open(conf.Path)
