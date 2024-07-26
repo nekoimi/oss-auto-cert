@@ -40,13 +40,19 @@ func DateIsExpire(dateStr string, aheadHours time.Duration) bool {
 	return diff.Hours() < aheadHours.Hours()
 }
 
-func DateExpireDay(dateStr string) int {
+// DateDiffNow 获取当前时间到目标时间相差的天数
+func DateDiffNow(dateStr string) int {
 	target, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		log.Printf("日期解析异常: %s, %s\n", dateStr, err.Error())
 		return 0
 	}
 
-	diff := target.Sub(time.Now())
+	now := time.Now()
+	if target.Before(now) {
+		return 0
+	}
+
+	diff := target.Sub(now)
 	return int(diff.Hours()) / 24
 }

@@ -11,18 +11,27 @@ import (
 	"time"
 )
 
-var conf = new(config.Config)
+var (
+	sig  = make(chan os.Signal)
+	conf = new(config.Config)
+)
 
 func init() {
 	flag.StringVar(&conf.Path, "config-path", "", "配置文件路径")
 	flag.Parse()
+
 	conf.LoadOptions()
+
+	watchSig()
+}
+
+func watchSig() {
+	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 }
 
 func main() {
-	sig := make(chan os.Signal)
-	manager := core.New(conf)
-	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	cm := core.New(conf)
+
 	tick := time.NewTicker(6 * time.Hour)
 	for {
 		select {
@@ -31,7 +40,7 @@ func main() {
 			log.Println("Exit.")
 			os.Exit(0)
 		case <-tick.C:
-			go manager.CertRun()
+			go cm.Run()
 		}
 	}
 }

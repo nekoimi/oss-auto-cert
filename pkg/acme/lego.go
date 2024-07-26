@@ -68,7 +68,7 @@ func NewLego(acme config.Acme) *Lego {
 }
 
 // Obtain 申请证书
-func (lg *Lego) Obtain(domain string, bucket string, ossClient *oss.Client) (*certificate.Resource, error) {
+func (lg *Lego) Obtain(bucket string, domain string, ossClient *oss.Client) (*certificate.Resource, error) {
 	provider, err := oss_provider.NewHTTPProvider(bucket, ossClient)
 	if err != nil {
 		return nil, err
