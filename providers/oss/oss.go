@@ -14,8 +14,6 @@ type HTTPProvider struct {
 	ossClient *oss.Client
 }
 
-// NewHTTPProvider returns a HTTPProvider instance with a configured oss bucket and aws session.
-// Credentials must be passed in the environment variables.
 func NewHTTPProvider(bucket string, ossClient *oss.Client) (*HTTPProvider, error) {
 	return &HTTPProvider{
 		bucket:    bucket,
@@ -23,7 +21,6 @@ func NewHTTPProvider(bucket string, ossClient *oss.Client) (*HTTPProvider, error
 	}, nil
 }
 
-// Present makes the token available at `HTTP01ChallengePath(token)` by creating a file in the given oss bucket.
 func (s *HTTPProvider) Present(domain, token, keyAuth string) error {
 	bucket, err := s.ossClient.Bucket(s.bucket)
 	if err != nil {
@@ -43,7 +40,6 @@ func (s *HTTPProvider) Present(domain, token, keyAuth string) error {
 	return nil
 }
 
-// CleanUp removes the file created for the challenge.
 func (s *HTTPProvider) CleanUp(domain, token, keyAuth string) error {
 	bucket, err := s.ossClient.Bucket(s.bucket)
 	if err != nil {
