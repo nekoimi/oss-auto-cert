@@ -1,7 +1,6 @@
-package main
+package utils
 
 import (
-	"log"
 	"strings"
 	"testing"
 	"time"
@@ -15,5 +14,5 @@ func TestCasID(t *testing.T) {
 }
 
 func TestExpire(t *testing.T) {
-	log.Println(dateIsExpire("2024-07-27", time.Hour*3))
+	t.Log(DateIsExpire("2024-07-27", time.Hour*3))
 }

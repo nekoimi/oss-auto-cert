@@ -25,4 +25,4 @@ go.work.sum
 .idea
 
 dev.yaml
-certs
+docs
