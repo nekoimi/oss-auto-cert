@@ -7,6 +7,7 @@ import (
 	"github.com/nekoimi/oss-auto-cert/pkg/acme"
 	"github.com/nekoimi/oss-auto-cert/pkg/alioss"
 	"github.com/nekoimi/oss-auto-cert/pkg/cas"
+	"github.com/nekoimi/oss-auto-cert/pkg/dcdn"
 	"log"
 )
 
@@ -15,6 +16,7 @@ type Manager struct {
 	buckets []config.Bucket
 	access  oss.Credentials
 	cas     *cas.Service
+	dcdn    *dcdn.DCDNOps
 	lego    *acme.Lego
 }
 
@@ -30,6 +32,7 @@ func New(conf *config.Config) *Manager {
 		buckets: conf.Buckets,
 		access:  access,
 		cas:     cas.New(access),
+		dcdn:    dcdn.New(access),
 		lego:    acme.NewLego(conf.Acme),
 	}
 }
@@ -79,8 +82,8 @@ func (m *Manager) Run() {
 				continue
 			}
 
-			// 更新OSS域名关联的证书
 			go func() {
+				// 更新OSS域名关联的证书
 				err := b.UpgradeCert(info.Domain, fmt.Sprintf("%d-%s", certID, info.Region))
 				if err != nil {
 					log.Printf(err.Error())
@@ -89,6 +92,10 @@ func (m *Manager) Run() {
 
 			go func() {
 				// 更新CDN关联的域名证书
+				err := m.dcdn.UpgradeCert(info.Domain, certID)
+				if err != nil {
+					log.Printf(err.Error())
+				}
 			}()
 		}
 	}
