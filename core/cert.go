@@ -9,7 +9,7 @@ import (
 	"log"
 )
 
-type CertManager struct {
+type Manager struct {
 	running bool
 	buckets []config.Bucket
 	access  oss.Credentials
@@ -17,14 +17,14 @@ type CertManager struct {
 	lego    *acme.Lego
 }
 
-func New(conf *config.Config) *CertManager {
+func New(conf *config.Config) *Manager {
 	credentialsProvider, err := oss.NewEnvironmentVariableCredentialsProvider()
 	if err != nil {
 		log.Fatalf("缺少OSS访问AccessKey环境变量配置: %s\n", err.Error())
 	}
 
 	access := credentialsProvider.GetCredentials()
-	return &CertManager{
+	return &Manager{
 		running: false,
 		buckets: conf.Buckets,
 		access:  access,
@@ -33,18 +33,18 @@ func New(conf *config.Config) *CertManager {
 	}
 }
 
-func (cm *CertManager) Run() {
-	if cm.running {
+func (m *Manager) Run() {
+	if m.running {
 		return
 	}
 
-	cm.running = true
+	m.running = true
 	defer func() {
-		cm.running = false
+		m.running = false
 	}()
 
-	for _, bucket := range cm.buckets {
-		b, err := alioss.New(bucket, cm.access)
+	for _, bucket := range m.buckets {
+		b, err := alioss.New(bucket, m.access)
 		if err != nil {
 			log.Printf("bucket(%s)域名证书处理异常: %s\n", bucket.Name, err.Error())
 			continue
@@ -56,7 +56,7 @@ func (cm *CertManager) Run() {
 			continue
 		}
 
-		expired, err := cm.cas.IsExpired(info.ID)
+		expired, err := m.cas.IsExpired(info.ID)
 		if err != nil {
 			log.Printf("bucket(%s)检查自定义域名(%s)过期状态异常: %s\n", bucket.Name, info.Domain, err.Error())
 			continue
@@ -64,18 +64,18 @@ func (cm *CertManager) Run() {
 
 		if expired {
 			// 过期，申请新证书
-			cert, err := cm.lego.Obtain(bucket.Name, info.Domain, b.Client)
+			cert, err := m.lego.Obtain(bucket.Name, info.Domain, b.Client)
 			if err != nil {
 				log.Printf("域名(%s)申请证书失败: %s \n", info.Domain, err.Error())
-				return
+				continue
 			}
 
 			log.Printf("新证书信息: %s\n", cert)
 			// 上传证书文件到阿里云数字证书管理服务
-			certID, err := cm.cas.Upload(cert)
+			certID, err := m.cas.Upload(cert)
 			if err != nil {
 				log.Printf("上传域名(%s)证书失败: %s \n", info.Domain, err.Error())
-				return
+				continue
 			}
 
 			// 更新OSS域名关联的证书

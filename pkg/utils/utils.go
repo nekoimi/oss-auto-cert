@@ -3,19 +3,11 @@ package utils
 import (
 	"fmt"
 	"log"
-	"strings"
 	"time"
 )
 
-func StrSplitFirst(s string, sep string) string {
-	for _, item := range strings.SplitN(s, sep, 2) {
-		return item
-	}
-	return s
-}
-
 // DateIsExpire 是否过期
-// aheadHours 提前过期小时数
+// aheadHours 提前过期时间
 func DateIsExpire(dateStr string, aheadHours time.Duration) bool {
 	now := time.Now()
 	// yyyy-MM-dd
@@ -40,8 +32,8 @@ func DateIsExpire(dateStr string, aheadHours time.Duration) bool {
 	return diff.Hours() < aheadHours.Hours()
 }
 
-// DateDiffNow 获取当前时间到目标时间相差的天数
-func DateDiffNow(dateStr string) int {
+// TimeDiffDay 获取当前时间到目标时间相差的天数
+func TimeDiffDay(dateStr string) int {
 	target, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		log.Printf("日期解析异常: %s, %s\n", dateStr, err.Error())

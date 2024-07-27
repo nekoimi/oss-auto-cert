@@ -63,7 +63,7 @@ func (s *Service) IsExpired(certID int64) (bool, error) {
 		log.Printf("证书(%s, %d)过期，需要更换新证书\n", *detail.Name, certID)
 		return true, nil
 	} else {
-		log.Printf("证书(%s, %d)未过期，过期日期: %s, 还剩%d天\n", *detail.Name, certID, *detail.EndDate, utils.DateDiffNow(*detail.EndDate))
+		log.Printf("证书(%s, %d)未过期，过期日期: %s, 还剩%d天\n", *detail.Name, certID, *detail.EndDate, utils.TimeDiffDay(*detail.EndDate))
 		return false, nil
 	}
 }
