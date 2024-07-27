@@ -16,3 +16,11 @@ func TestCasID(t *testing.T) {
 func TestExpire(t *testing.T) {
 	t.Log(DateIsExpire("2024-07-27", time.Hour*3))
 }
+
+func TestShortDomain(t *testing.T) {
+	t.Log(ShortDomain("tieba.baidu.com"))
+}
+
+func TestUUID(t *testing.T) {
+	t.Log(UUID())
+}

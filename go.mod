@@ -8,6 +8,7 @@ require (
 	github.com/alibabacloud-go/tea v1.2.1
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/go-acme/lego/v4 v4.17.4
+	github.com/google/uuid v1.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

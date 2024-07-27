@@ -1,6 +1,7 @@
 package cas
 
 import (
+	"bytes"
 	"fmt"
 	cas20200407 "github.com/alibabacloud-go/cas-20200407/v2/client"
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
@@ -70,6 +71,25 @@ func (s *Service) IsExpired(certID int64) (bool, error) {
 
 // Upload 上传证书到 证书管理服务
 func (s *Service) Upload(cert *certificate.Resource) (int64, error) {
+	request := new(cas20200407.UploadUserCertificateRequest)
+	// 证书名称
+	request.Name = tea.String(utils.ShortDomain(cert.Domain) + "-" + utils.SplitFirst(utils.UUID(), "-"))
+	// 证书私钥
+	request.Key = tea.String(bytes.NewBuffer(cert.PrivateKey).String())
+	// 证书内容
+	request.Cert = tea.String(bytes.NewBuffer(cert.Certificate).String())
+	// 上传证书到证书管理服务
+	resp, err := s.client.UploadUserCertificate(request)
+	if err != nil {
+		return 0, fmt.Errorf("上传证书失败：%w", err)
+	}
 
-	return 0, nil
+	if *resp.StatusCode != 200 {
+		return 0, fmt.Errorf("上传证书请求响应异常: 状态码 -> %d；响应: %s", resp.StatusCode, resp)
+	}
+
+	upload := resp.Body
+	log.Printf("上传证书成功响应：%s\n", upload)
+
+	return *upload.CertId, nil
 }

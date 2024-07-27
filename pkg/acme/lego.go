@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"fmt"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
@@ -106,7 +107,7 @@ func (lg *Lego) Obtain(bucket string, domain string, ossClient *oss.Client) (*ce
 			Bundle: true,
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("域名(%s)续签证书失败：%w", domain, err)
 		}
 	} else {
 		// 发起申请请求
@@ -118,7 +119,7 @@ func (lg *Lego) Obtain(bucket string, domain string, ossClient *oss.Client) (*ce
 		// 申请证书
 		cert, err = lg.client.Certificate.Obtain(req)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("域名(%s)申请证书失败：%w", domain, err)
 		}
 	}
 

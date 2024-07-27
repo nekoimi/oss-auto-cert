@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/google/uuid"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -47,4 +50,48 @@ func TimeDiffDay(dateStr string) int {
 
 	diff := target.Sub(now)
 	return int(diff.Hours()) / 24
+}
+
+// ShortDomain 简短化域名
+// app.test.com => app-t-com
+func ShortDomain(domain string) string {
+	if domain == "" {
+		return ""
+	}
+
+	buf := bytes.NewBufferString("")
+	ss := strings.Split(strings.ReplaceAll(domain, "-", ""), ".")
+	for i, s := range ss {
+		if i == 0 {
+			buf.WriteString(s)
+		} else if i == len(ss)-1 {
+			buf.WriteString("-")
+			buf.WriteString(s)
+		} else {
+			buf.WriteString("-")
+			buf.WriteString(s[:1])
+		}
+	}
+	return buf.String()
+}
+
+func UUID() string {
+	return uuid.New().String()
+}
+
+// SplitFirst 按指定符号分割 取第一个
+func SplitFirst(s string, sep string) string {
+	for _, item := range strings.SplitN(s, sep, 2) {
+		return item
+	}
+	return s
+}
+
+func SplitGetN(s string, sep string, n int) string {
+	for i, item := range strings.Split(s, sep) {
+		if i == n-1 {
+			return item
+		}
+	}
+	return s
 }

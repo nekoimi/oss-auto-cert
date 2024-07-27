@@ -4,11 +4,9 @@ import (
 	"flag"
 	"github.com/nekoimi/oss-auto-cert/config"
 	"github.com/nekoimi/oss-auto-cert/core"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 var (
@@ -17,7 +15,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&conf.Path, "config-path", "", "配置文件路径")
+	flag.StringVar(&conf.Path, "config", "", "配置文件路径")
 	flag.Parse()
 
 	conf.LoadOptions()
@@ -30,17 +28,18 @@ func watchSig() {
 }
 
 func main() {
-	cm := core.New(conf)
+	m := core.New(conf)
 
-	tick := time.NewTicker(6 * time.Hour)
-	for {
-		select {
-		case <-sig:
-			tick.Stop()
-			log.Println("Exit.")
-			os.Exit(0)
-		case <-tick.C:
-			go cm.Run()
-		}
-	}
+	m.Run()
+	//tick := time.NewTicker(6 * time.Hour)
+	//for {
+	//	select {
+	//	case <-sig:
+	//		tick.Stop()
+	//		log.Println("Exit.")
+	//		os.Exit(0)
+	//	case <-tick.C:
+	//		go cm.Run()
+	//	}
+	//}
 }

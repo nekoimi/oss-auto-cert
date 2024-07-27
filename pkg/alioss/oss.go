@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/nekoimi/oss-auto-cert/config"
+	"github.com/nekoimi/oss-auto-cert/pkg/utils"
 	"log"
 	"strconv"
-	"strings"
 )
 
 type Bucket struct {
@@ -64,35 +64,33 @@ func (b *Bucket) GetCert() (*CertInfo, error) {
 		return nil, fmt.Errorf("bucket(%s)域名(%s)证书信息ID为空", b.name, cname.Domain)
 	}
 
-	id, err := extractID(certID)
+	int64Str := utils.SplitFirst(certID, "-")
+	int64ID, err := strconv.ParseInt(int64Str, 10, 64)
 	if err != nil {
 		return nil, err
 	}
 
 	return &CertInfo{
-		ID:     id,
+		ID:     int64ID,
+		Region: utils.SplitGetN(certID, "-", 2),
 		Domain: cname.Domain,
 	}, nil
 }
 
 // UpgradeCert 更新域名绑定的证书
-func (b *Bucket) UpgradeCert(domain string, certID int64) error {
+func (b *Bucket) UpgradeCert(domain string, certID string) error {
+	log.Printf("更新域名(%s)证书：%s\n", domain, certID)
+
+	putCname := oss.PutBucketCname{
+		Cname: domain,
+		CertificateConfiguration: &oss.CertificateConfiguration{
+			CertId: certID,
+		},
+	}
+	err := b.Client.PutBucketCnameWithCertificate(b.name, putCname)
+	if err != nil {
+		return fmt.Errorf("bucket(%s)更新证书失败：%w", b.name, err)
+	}
 
 	return nil
-}
-
-func extractID(certID string) (int64, error) {
-	int64Str := certID
-
-	for _, item := range strings.SplitN(certID, "-", 2) {
-		int64Str = item
-		break
-	}
-
-	certIDInt64, err := strconv.ParseInt(int64Str, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return certIDInt64, nil
 }
