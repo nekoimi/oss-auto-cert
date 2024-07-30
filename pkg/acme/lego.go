@@ -158,7 +158,7 @@ func (lg *Lego) save(cert *certificate.Resource) {
 		if err := files.BackupIfExists(filepath.Join(baseDir, name)); err != nil {
 			log.Printf(err.Error())
 		} else {
-			err = files.Write(filepath.Join(baseDir, name), raw)
+			err = os.WriteFile(filepath.Join(baseDir, name), raw, os.ModePerm)
 			if err != nil {
 				log.Printf(err.Error())
 			}
