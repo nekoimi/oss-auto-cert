@@ -72,6 +72,28 @@ docker run -d --rm -v $PWD/config.yaml:/etc/oss-auto-cert/config.yaml -e OSS_ACC
 docker run -d --rm -v $PWD/config.yaml:/etc/oss-auto-cert/config.yaml -v $PWD/certs:/var/lib/oss-auto-cert -e OSS_ACCESS_KEY_ID=xxx -e OSS_ACCESS_KEY_SECRET=xxx ghcr.io/nekoimi/oss-auto-cert:alpine
 ```
 
+- docker-compose 配置
+
+```yaml
+version: "3.8"
+services:
+  oss-auto-cert:
+    image: ghcr.io/nekoimi/oss-auto-cert:alpine
+    container_name: oss-auto-cert
+    hostname: oss-auto-cert
+    network_mode: host
+    command:
+      - -log-level=warn
+    volumes:
+      - $PWD/config.yaml:/etc/oss-auto-cert/config.yaml
+      - $PWD/certs:/var/lib/oss-auto-cert
+    privileged: true
+    restart: unless-stopped
+    environment:
+      OSS_ACCESS_KEY_ID: xxx
+      OSS_ACCESS_KEY_SECRET: xxx
+```
+
 ### Systemd部署
 
 - 下载最新版本：[`release`](https://github.com/nekoimi/oss-auto-cert/releases) 
@@ -96,6 +118,20 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
+```
+
+- 开启
+
+```shell
+systemctl enable oss-auto-cert
+
+systemctl start oss-auto-cert
+```
+
+- 停止
+
+```shell
+systemctl stop oss-auto-cert
 ```
 
 ## 感谢
