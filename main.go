@@ -11,15 +11,23 @@ import (
 )
 
 var (
-	sig  = make(chan os.Signal)
-	conf = new(config.Config)
+	logLevel string
+	sig      = make(chan os.Signal)
+	conf     = new(config.Config)
 )
 
 func init() {
-	log.SetLevel(log.DebugLevel)
-
+	flag.StringVar(&logLevel, "log-level", "info", "日志等级")
 	flag.StringVar(&conf.Path, "config", "", "配置文件路径")
 	flag.Parse()
+
+	log.SetReportCaller(true)
+	if level, err := log.ParseLevel(logLevel); err != nil {
+		log.Warnf("Invalid log level parameter: %s. Use default info level!", logLevel)
+		log.SetLevel(log.InfoLevel)
+	} else {
+		log.SetLevel(level)
+	}
 
 	conf.LoadOptions()
 

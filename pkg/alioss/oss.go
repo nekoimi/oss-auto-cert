@@ -5,6 +5,7 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/charmbracelet/log"
 	"github.com/nekoimi/oss-auto-cert/config"
+	"github.com/nekoimi/oss-auto-cert/pkg/dto"
 	"github.com/nekoimi/oss-auto-cert/pkg/utils"
 	"strconv"
 )
@@ -27,7 +28,7 @@ func New(bucket config.Bucket, access oss.Credentials) (*BucketService, error) {
 }
 
 // GetCert 获取bucket下自定义域名证书ID信息
-func (b *BucketService) GetCert() (*CertInfo, error) {
+func (b *BucketService) GetCert() (*dto.CertInfo, error) {
 	// 获取bucket全部自定义域名列表
 	result, err := b.Client.ListBucketCname(b.name)
 	if err != nil {
@@ -70,9 +71,9 @@ func (b *BucketService) GetCert() (*CertInfo, error) {
 		return nil, err
 	}
 
-	return &CertInfo{
+	return &dto.CertInfo{
 		ID:     int64ID,
-		Region: utils.SplitGetN(certID, "-", 2),
+		Region: utils.SplitGetN(certID, "-", 2, 2),
 		Domain: cname.Domain,
 	}, nil
 }
@@ -93,6 +94,8 @@ func (b *BucketService) UpgradeCert(domain string, certID string) error {
 	if err != nil {
 		return fmt.Errorf("bucket(%s)更新证书失败：%w", b.name, err)
 	}
+
+	log.Infof("OSS自定义域名(%s)证书更新成功! 证书: %s", domain, certID)
 
 	return nil
 }

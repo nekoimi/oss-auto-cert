@@ -4,9 +4,11 @@ go 1.22.4
 
 require (
 	github.com/alibabacloud-go/cas-20200407/v2 v2.3.0
-	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.6
+	github.com/alibabacloud-go/cdn-20180510/v5 v5.0.0
+	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.8
 	github.com/alibabacloud-go/tea v1.2.1
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
+	github.com/charmbracelet/log v0.4.0
 	github.com/go-acme/lego/v4 v4.17.4
 	github.com/google/uuid v1.6.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -14,7 +16,6 @@ require (
 
 require (
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.4 // indirect
-	github.com/alibabacloud-go/dcdn-20180115/v3 v3.4.0 // indirect
 	github.com/alibabacloud-go/debug v0.0.0-20190504072949-9472017b5c68 // indirect
 	github.com/alibabacloud-go/endpoint-util v1.1.0 // indirect
 	github.com/alibabacloud-go/openapi-util v0.1.0 // indirect
@@ -25,7 +26,6 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/charmbracelet/lipgloss v0.10.0 // indirect
-	github.com/charmbracelet/log v0.4.0 // indirect
 	github.com/clbanning/mxj/v2 v2.5.5 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect

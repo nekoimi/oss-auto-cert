@@ -5,10 +5,13 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"os"
+	"time"
 )
 
 const (
 	DefaultConfigPath = "/etc/oss-auto-cert/config.yaml"
+	// ExpiredEarly 提前过期时间点
+	ExpiredEarly = time.Hour * 24 * 5
 )
 
 type Config struct {

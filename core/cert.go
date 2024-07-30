@@ -8,7 +8,8 @@ import (
 	"github.com/nekoimi/oss-auto-cert/pkg/acme"
 	"github.com/nekoimi/oss-auto-cert/pkg/alioss"
 	"github.com/nekoimi/oss-auto-cert/pkg/cas"
-	"github.com/nekoimi/oss-auto-cert/pkg/dcdn"
+	"github.com/nekoimi/oss-auto-cert/pkg/cdn"
+	"sync"
 )
 
 type Manager struct {
@@ -16,7 +17,7 @@ type Manager struct {
 	buckets []config.Bucket
 	access  oss.Credentials
 	cas     *cas.Service
-	dcdn    *dcdn.Service
+	cdn     *cdn.Service
 	lego    *acme.LegoService
 }
 
@@ -32,7 +33,7 @@ func New(conf *config.Config) *Manager {
 		buckets: conf.Buckets,
 		access:  access,
 		cas:     cas.New(access),
-		dcdn:    dcdn.New(access),
+		cdn:     cdn.New(access),
 		lego:    acme.NewLego(conf.Acme),
 	}
 }
@@ -74,31 +75,41 @@ func (m *Manager) Run() {
 				continue
 			}
 
-			log.Infof("新证书信息: %s", cert)
 			// 上传证书文件到阿里云数字证书管理服务
-			certID, err := m.cas.Upload(cert)
+			certInfo, err := m.cas.Upload(cert)
 			if err != nil {
 				log.Errorf(err.Error())
 				continue
 			}
 
-			log.Infof("证书上传信息: %s, ID-%d", cert, certID)
+			certInfo.Region = info.Region
+
+			log.Infof("证书上传信息: %s", certInfo)
+
+			var wg sync.WaitGroup
+			wg.Add(2)
 
 			go func() {
+				defer wg.Done()
+
 				// 更新OSS域名关联的证书
-				err := b.UpgradeCert(info.Domain, fmt.Sprintf("%d-%s", certID, info.Region))
+				err := b.UpgradeCert(info.Domain, fmt.Sprintf("%d-%s", certInfo.ID, info.Region))
 				if err != nil {
 					log.Errorf(err.Error())
 				}
 			}()
 
 			go func() {
+				defer wg.Done()
+
 				// 更新CDN关联的域名证书
-				err := m.dcdn.UpgradeCert(info.Domain, certID)
+				err := m.cdn.UpgradeCert(info.Domain, certInfo)
 				if err != nil {
 					log.Errorf(err.Error())
 				}
 			}()
+
+			wg.Wait()
 		}
 	}
 }

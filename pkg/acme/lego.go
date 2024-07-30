@@ -82,7 +82,7 @@ func (lg *LegoService) Obtain(bucket string, domain string, ossClient *oss.Clien
 	var cert *certificate.Resource
 
 	// 检查本地是否存在证书
-	localCert := filepath.Join(lg.saveDir, domain, "cert.key")
+	localCert := filepath.Join(lg.saveDir, domain, "cert.crt")
 	ok, b := files.ReadIfExists(localCert)
 	if ok {
 		// 续签证书
@@ -96,6 +96,13 @@ func (lg *LegoService) Obtain(bucket string, domain string, ossClient *oss.Clien
 		ok, b = files.ReadIfExists(localCsr)
 		if ok {
 			renew.CSR = b
+		}
+
+		// 尝试读取颁发者证书
+		localIssuerCert := filepath.Join(lg.saveDir, domain, "cert-issuer.crt")
+		ok, b = files.ReadIfExists(localIssuerCert)
+		if ok {
+			renew.IssuerCertificate = b
 		}
 
 		// 发起续签请求
@@ -119,7 +126,7 @@ func (lg *LegoService) Obtain(bucket string, domain string, ossClient *oss.Clien
 		}
 	}
 
-	log.Infof("域名(%s)申请证书成功: %s", domain, cert)
+	log.Infof("域名(%s)申请证书成功!", domain)
 
 	// 保存证书到本地
 	go lg.save(cert)
