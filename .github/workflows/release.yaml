@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     env:
       CGO_ENABLED: 0
       OUTPUT_NAME: oss-auto-cert
