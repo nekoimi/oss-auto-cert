@@ -1,7 +1,16 @@
-# 阿里云OSS配置
+# 企业微信机器人webhook地址
+webhook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxx-xxxxx-xxxxx-xxxxxx-xxxxxxx
+# 证书申请配置
+acme:
+  email: 邮箱地址
+  data-dir: 申请的证书文件保存目录（绝对路径）
+# 阿里云OSS配置 Bucket信息列表
 buckets:
-  - name: fsdfsd
-    region: fsdfsdf
+  - name: bucket名称1
+    endpoint: bucket信息endpoint地址
 
-  - name: fdasda2
-    region: fsdfsadf2
+  - name: bucket名称2
+    endpoint: bucket信息endpoint地址
+
+  - name: bucket名称3
+    endpoint: bucket信息endpoint地址
