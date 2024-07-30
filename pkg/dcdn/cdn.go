@@ -31,26 +31,69 @@ func New(access oss.Credentials) *Service {
 	}
 }
 
-// UpgradeCert 更新CDN加速域名证书
-func (d *Service) UpgradeCert(domain string, certID int64) error {
+// IsApplySSL 域名是否应用CDN加速SSL
+// 域名CDN有效，SSL有效
+func (d *Service) IsApplySSL(domain string) (bool, error) {
 	// 查询加速域名信息
-	request := new(dcdn20180115.DescribeDcdnDomainDetailRequest)
-	request.DomainName = tea.String(domain)
+	req := new(dcdn20180115.DescribeDcdnDomainDetailRequest)
+	req.DomainName = tea.String(domain)
 
-	resp, err := d.client.DescribeDcdnDomainDetail(request)
+	resp, err := d.client.DescribeDcdnDomainDetail(req)
 	if err != nil {
-		return fmt.Errorf("获取CDN加速域名(%s)详情异常: %w", domain, err)
+		return false, fmt.Errorf("获取CDN加速域名(%s)详情异常: %w", domain, err)
 	}
 
 	if *resp.StatusCode != 200 {
-		return fmt.Errorf("获取CDN加速域名(%s)详情请求响应异常: 状态码 -> %d；响应: %s", domain, resp.StatusCode, resp)
+		return false, fmt.Errorf("获取CDN加速域名(%s)详情请求响应异常: 状态码 -> %d；响应: %s", domain, resp.StatusCode, resp)
 	}
 
+	log.Printf("CDN加速域名(%s)详情响应: %s\n", domain, resp)
+
 	detail := resp.Body.DomainDetail
-	// 域名ssl关闭 or
-	if *detail.SSLProtocol == "off" {
-		return fmt.Errorf("CDN加速域名(%s)未开启SSL", domain)
+
+	// 域名状态
+	if *detail.DomainStatus != "online" {
+		log.Printf("CDN加速域名(%s)状态异常: %s\n", domain, *detail.DomainStatus)
+		return false, nil
 	}
+
+	// 域名ssl关闭
+	if *detail.SSLProtocol != "on" {
+		log.Printf("CDN加速域名(%s)未开启SSL\n", domain)
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// UpgradeCert 更新CDN加速域名证书
+func (d *Service) UpgradeCert(domain string, certID int64) error {
+	if b, err := d.IsApplySSL(domain); err != nil {
+		return err
+	} else if !b {
+		log.Printf("CDN加速域名(%s)为应用SSL加速，忽略证书更换\n", domain)
+		return nil
+	}
+
+	// 查询加速域名证书信息
+	req := new(dcdn20180115.DescribeDcdnDomainCertificateInfoRequest)
+	req.DomainName = tea.String(domain)
+
+	resp, err := d.client.DescribeDcdnDomainCertificateInfo(req)
+	if err != nil {
+		return fmt.Errorf("获取CDN加速域名(%s)证书信息异常: %w", domain, err)
+	}
+
+	if *resp.StatusCode != 200 {
+		return fmt.Errorf("获取CDN加速域名(%s)证书信息请求响应异常: 状态码 -> %d；响应: %s", domain, resp.StatusCode, resp)
+	}
+
+	log.Printf("CDN加速域名(%s)证书信息响应: %s\n", domain, resp)
+
+	//certInfos := resp.Body.CertInfos
+	//if certInfos.CertInfo {
+	//
+	//}
 
 	return nil
 }
