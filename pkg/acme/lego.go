@@ -36,8 +36,14 @@ func NewLego(acme config.Acme) *LegoService {
 	c := lego.NewConfig(user)
 
 	// 此处配置密钥的类型和密钥申请的地址，记得上线后替换成 lego.LEDirectoryProduction
-	// 测试环境下就用 lego.LEDirectoryStaging
-	c.CADirURL = lego.LEDirectoryStaging
+	debug := os.Getenv("LEGO_DEBUG")
+	if debug == "true" {
+		// 演示
+		// 测试环境下就用 lego.LEDirectoryStaging
+		c.CADirURL = lego.LEDirectoryStaging
+	} else {
+		c.CADirURL = lego.LEDirectoryProduction
+	}
 	c.Certificate.KeyType = certcrypto.RSA2048
 
 	// 创建与CA服务器交互的客户端
