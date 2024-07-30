@@ -1,0 +1,85 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        required: true
+
+jobs:
+  build_binaries:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      CGO_ENABLED: 0
+      OUTPUT_NAME: oss-auto-cert
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Version
+        id: prep
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          echo "VERSION=${{ env.INPUT_TAG }}" >> $GITHUB_OUTPUT
+          echo "VERSION=${{ env.INPUT_TAG }}" >> $GITHUB_ENV
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build Binaries
+        id: build
+        shell: bash
+        run: |
+          mkdir binaries
+          
+          linux_arch=('amd64' 'arm64')
+          for arch in "${linux_arch[@]}"; do
+            export GOARCH="$arch" 
+            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-linux-${arch} -ldflags="-extldflags -static -s -w" -trimpath
+          done
+          
+          windows_arch=('amd64' 'arm64')
+          for arch in "${windows_arch[@]}"; do
+            export GOOS="windows"
+            export GOARCH="$arch"
+            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-windows-${arch}.exe -ldflags="-extldflags -static -s -w" -trimpath
+          done
+          
+          darwin_arch=('amd64' 'arm64')
+          for arch in "${darwin_arch[@]}"; do
+            export GOOS="darwin"
+            export GOARCH=$arch
+            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-darwin-${arch} -ldflags="-extldflags -static -s -w" -trimpath
+          done
+          
+          ls -l binaries
+
+      - name: Move Files to Release Directory
+        shell: bash
+        run: |
+          mkdir -p release
+
+          for file in $(ls binaries | grep -E "^${{ env.OUTPUT_NAME }}"); do
+            mv binaries/$file release/
+          done
+
+          for file in $(ls release); do
+            sha256sum release/$file | awk '{print $1}' > release/$file.sha256.txt
+          done
+
+          ls -l release/
+
+      - name: Release
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          files: |
+            release/*
