@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: read
     env:
       CGO_ENABLED: 0
       OUTPUT_NAME: oss-auto-cert
@@ -79,15 +78,17 @@ jobs:
           ls -l release/
 
       - name: Build Changelog
-        id: github_release
-        uses: mikepenz/release-changelog-builder-action@v4
+        uses: Bullrich/generate-release-changelog@master
+        id: github_changelog
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
 
       - name: Release
         uses: ncipollo/release-action@v1
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
+          name: Release ${{ github.ref }}
           prerelease: false
-          body: ${{ steps.github_release.outputs.changelog }}
+          body: |
+            ${{ steps.github_changelog.outputs.changelog }}
           artifacts: release/*
