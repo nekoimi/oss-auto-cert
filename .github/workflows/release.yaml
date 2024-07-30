@@ -77,9 +77,16 @@ jobs:
 
           ls -l release/
 
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Release
         uses: ncipollo/release-action@v1
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
+          body: ${{ steps.github_release.outputs.changelog }}
           artifacts: release/*
