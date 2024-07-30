@@ -18,6 +18,8 @@ type Config struct {
 	// 配置文件路径
 	// 默认路径: DefaultConfigPath
 	Path string
+	// 通知地址
+	Webhook string `yaml:"webhook"`
 	// Acme配置
 	Acme Acme `yaml:"acme"`
 	// Bucket配置

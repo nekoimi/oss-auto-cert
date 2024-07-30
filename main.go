@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 var (
@@ -41,16 +42,15 @@ func watchSig() {
 func main() {
 	m := core.New(conf)
 
-	m.Run()
-	//tick := time.NewTicker(6 * time.Hour)
-	//for {
-	//	select {
-	//	case <-sig:
-	//		tick.Stop()
-	//		log.Println("Exit.")
-	//		os.Exit(0)
-	//	case <-tick.C:
-	//		go cm.Run()
-	//	}
-	//}
+	tick := time.NewTicker(6 * time.Hour)
+	for {
+		select {
+		case <-sig:
+			tick.Stop()
+			log.Infof("Exit.")
+			os.Exit(0)
+		case <-tick.C:
+			go m.Run()
+		}
+	}
 }
