@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/charmbracelet/log"
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/lego"
@@ -14,7 +15,6 @@ import (
 	"github.com/nekoimi/oss-auto-cert/config"
 	"github.com/nekoimi/oss-auto-cert/pkg/files"
 	oss_provider "github.com/nekoimi/oss-auto-cert/providers/oss"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -43,14 +43,14 @@ func NewLego(acme config.Acme) *LegoService {
 	// 创建与CA服务器交互的客户端
 	client, err := lego.NewClient(c)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf(err.Error())
 	}
 
 	reg, err := client.Registration.Register(registration.RegisterOptions{
 		TermsOfServiceAgreed: true,
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf(err.Error())
 	}
 
 	user.Registration = reg
@@ -119,7 +119,7 @@ func (lg *LegoService) Obtain(bucket string, domain string, ossClient *oss.Clien
 		}
 	}
 
-	log.Printf("域名(%s)申请证书成功: %s\n", domain, cert)
+	log.Infof("域名(%s)申请证书成功: %s", domain, cert)
 
 	// 保存证书到本地
 	go lg.save(cert)
@@ -133,12 +133,12 @@ func (lg *LegoService) save(cert *certificate.Resource) {
 
 	baseDir := filepath.Join(lg.saveDir, cert.Domain)
 	if exists, err := files.Exists(baseDir); err != nil {
-		log.Printf(err.Error())
+		log.Errorf(err.Error())
 		return
 	} else if !exists {
 		err = os.MkdirAll(baseDir, os.ModeDir)
 		if err != nil {
-			log.Printf(err.Error())
+			log.Errorf(err.Error())
 			return
 		}
 	}
@@ -152,11 +152,11 @@ func (lg *LegoService) save(cert *certificate.Resource) {
 
 	for name, raw := range data {
 		if err := files.BackupIfExists(filepath.Join(baseDir, name)); err != nil {
-			log.Printf(err.Error())
+			log.Errorf(err.Error())
 		} else {
 			err = os.WriteFile(filepath.Join(baseDir, name), raw, os.ModePerm)
 			if err != nil {
-				log.Printf(err.Error())
+				log.Errorf(err.Error())
 			}
 		}
 	}
@@ -183,7 +183,7 @@ func (u *User) GetPrivateKey() crypto.PrivateKey {
 func newUser(email string) *User {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf(err.Error())
 	}
 
 	return &User{

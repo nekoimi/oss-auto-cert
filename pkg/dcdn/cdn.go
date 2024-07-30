@@ -6,7 +6,7 @@ import (
 	dcdn20180115 "github.com/alibabacloud-go/dcdn-20180115/v3/client"
 	"github.com/alibabacloud-go/tea/tea"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
-	"log"
+	"github.com/charmbracelet/log"
 )
 
 type Service struct {
@@ -23,7 +23,7 @@ func New(access oss.Credentials) *Service {
 	}
 	client, err := dcdn20180115.NewClient(config)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf(err.Error())
 	}
 
 	return &Service{
@@ -47,19 +47,19 @@ func (d *Service) IsApplySSL(domain string) (bool, error) {
 		return false, fmt.Errorf("获取CDN加速域名(%s)详情请求响应异常: 状态码 -> %d；响应: %s", domain, resp.StatusCode, resp)
 	}
 
-	log.Printf("CDN加速域名(%s)详情响应: %s\n", domain, resp)
+	log.Debugf("CDN加速域名(%s)详情响应: %s", domain, resp)
 
 	detail := resp.Body.DomainDetail
 
 	// 域名状态
 	if *detail.DomainStatus != "online" {
-		log.Printf("CDN加速域名(%s)状态异常: %s\n", domain, *detail.DomainStatus)
+		log.Infof("CDN加速域名(%s)状态异常: %s", domain, *detail.DomainStatus)
 		return false, nil
 	}
 
 	// 域名ssl关闭
 	if *detail.SSLProtocol != "on" {
-		log.Printf("CDN加速域名(%s)未开启SSL\n", domain)
+		log.Infof("CDN加速域名(%s)未开启SSL", domain)
 		return false, nil
 	}
 
@@ -71,7 +71,7 @@ func (d *Service) UpgradeCert(domain string, certID int64) error {
 	if b, err := d.IsApplySSL(domain); err != nil {
 		return err
 	} else if !b {
-		log.Printf("CDN加速域名(%s)为应用SSL加速，忽略证书更换\n", domain)
+		log.Infof("CDN加速域名(%s)为应用SSL加速，忽略证书更换", domain)
 		return nil
 	}
 
@@ -88,7 +88,7 @@ func (d *Service) UpgradeCert(domain string, certID int64) error {
 		return fmt.Errorf("获取CDN加速域名(%s)证书信息请求响应异常: 状态码 -> %d；响应: %s", domain, resp.StatusCode, resp)
 	}
 
-	log.Printf("CDN加速域名(%s)证书信息响应: %s\n", domain, resp)
+	log.Debugf("CDN加速域名(%s)证书信息响应: %s", domain, resp)
 
 	//certInfos := resp.Body.CertInfos
 	//if certInfos.CertInfo {

@@ -3,9 +3,9 @@ package alioss
 import (
 	"fmt"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/charmbracelet/log"
 	"github.com/nekoimi/oss-auto-cert/config"
 	"github.com/nekoimi/oss-auto-cert/pkg/utils"
-	"log"
 	"strconv"
 )
 
@@ -42,22 +42,22 @@ func (b *BucketService) GetCert() (*CertInfo, error) {
 
 	// 这里先只取第一个
 	cname := cnameArr[0]
-	log.Printf("处理bucket(%s)自定义域名: %s \n", b.name, cname.Domain)
-	log.Printf("Status: %s\n", cname.Status)
-	log.Printf("Domain: %s\n", cname.Domain)
-	log.Printf("LastModified: %s \n", cname.LastModified)
+	log.Debugf("处理bucket(%s)自定义域名: %s", b.name, cname.Domain)
+	log.Debugf("Status: %s", cname.Status)
+	log.Debugf("Domain: %s", cname.Domain)
+	log.Debugf("LastModified: %s", cname.LastModified)
 
 	// 检查证书信息
 	cert := cname.Certificate
 	// 域名证书信息
-	log.Printf("证书信息: %s\n", cert)
-	log.Printf("Type: %s\n", cert.Type)
-	log.Printf("CertId: %s\n", cert.CertId)
-	log.Printf("Status: %s\n", cert.Status)
-	log.Printf("CreationDate: %s\n", cert.CreationDate)
-	log.Printf("Fingerprint: %s\n", cert.Fingerprint)
-	log.Printf("ValidStartDate: %s\n", cert.ValidStartDate)
-	log.Printf("ValidEndDate: %s\n", cert.ValidEndDate)
+	log.Debugf("证书信息: %s", cert)
+	log.Debugf("Type: %s", cert.Type)
+	log.Debugf("CertId: %s", cert.CertId)
+	log.Debugf("Status: %s", cert.Status)
+	log.Debugf("CreationDate: %s", cert.CreationDate)
+	log.Debugf("Fingerprint: %s", cert.Fingerprint)
+	log.Debugf("ValidStartDate: %s", cert.ValidStartDate)
+	log.Debugf("ValidEndDate: %s", cert.ValidEndDate)
 
 	certID := cert.CertId
 	if certID == "" {
@@ -79,7 +79,7 @@ func (b *BucketService) GetCert() (*CertInfo, error) {
 
 // UpgradeCert 更新域名绑定的证书
 func (b *BucketService) UpgradeCert(domain string, certID string) error {
-	log.Printf("更新域名(%s)证书：%s\n", domain, certID)
+	log.Debugf("更新域名(%s)证书：%s", domain, certID)
 
 	putCname := oss.PutBucketCname{
 		Cname: domain,

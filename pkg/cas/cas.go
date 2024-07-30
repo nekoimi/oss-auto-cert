@@ -7,9 +7,9 @@ import (
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	"github.com/alibabacloud-go/tea/tea"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/charmbracelet/log"
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/nekoimi/oss-auto-cert/pkg/utils"
-	"log"
 	"time"
 )
 
@@ -29,7 +29,7 @@ func New(access oss.Credentials) *Service {
 		Endpoint: tea.String("cas.aliyuncs.com"),
 	})
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf(err.Error())
 	}
 
 	return &Service{
@@ -61,10 +61,10 @@ func (s *Service) IsExpired(certID int64) (bool, error) {
 	}
 
 	if *detail.Expired || utils.DateIsExpire(*detail.EndDate, ExpiredEarly) {
-		log.Printf("证书(%s, %d)过期，需要更换新证书\n", *detail.Name, certID)
+		log.Warnf("证书(%s, %d)过期，需要更换新证书", *detail.Name, certID)
 		return true, nil
 	} else {
-		log.Printf("证书(%s, %d)未过期，过期日期: %s, 还剩%d天\n", *detail.Name, certID, *detail.EndDate, utils.TimeDiffDay(*detail.EndDate))
+		log.Infof("证书(%s, %d)未过期，过期日期: %s, 还剩%d天", *detail.Name, certID, *detail.EndDate, utils.TimeDiffDay(*detail.EndDate))
 		// TODO 测试直接让证书过期
 		return false, nil
 	}
@@ -90,7 +90,7 @@ func (s *Service) Upload(cert *certificate.Resource) (int64, error) {
 	}
 
 	upload := resp.Body
-	log.Printf("上传证书成功响应：%s\n", upload)
+	log.Infof("上传证书成功响应：%s", upload)
 
 	return *upload.CertId, nil
 }

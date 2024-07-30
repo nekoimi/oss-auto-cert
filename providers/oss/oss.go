@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/charmbracelet/log"
 	"github.com/go-acme/lego/v4/challenge/http01"
-	"log"
 	"strings"
 )
 
@@ -31,7 +31,7 @@ func (s *HTTPProvider) Present(domain, token, keyAuth string) error {
 	acl := oss.ObjectACL(oss.ACLPublicRead)
 	// 上传验证文件到oss存储bucket
 	objectKey := strings.Trim(http01.ChallengePath(token), "/")
-	log.Printf("上传HTTP域名(%s)验证文件: key -> %s \n", domain, objectKey)
+	log.Infof("上传HTTP域名(%s)验证文件: key -> %s", domain, objectKey)
 	err = bucket.PutObject(objectKey, bytes.NewReader([]byte(keyAuth)), acl)
 	if err != nil {
 		return fmt.Errorf("oss: failed to upload token to oss: %w", err)
@@ -47,7 +47,7 @@ func (s *HTTPProvider) CleanUp(domain, token, keyAuth string) error {
 	}
 
 	objectKey := strings.Trim(http01.ChallengePath(token), "/")
-	log.Printf("删除HTTP域名(%s)验证文件: key -> %s \n", domain, objectKey)
+	log.Infof("删除HTTP域名(%s)验证文件: key -> %s", domain, objectKey)
 	err = bucket.DeleteObject(objectKey)
 	if err != nil {
 		return fmt.Errorf("oss: could not remove file in oss bucket after HTTP challenge: %w", err)

@@ -2,7 +2,7 @@ package files
 
 import (
 	"errors"
-	"log"
+	"github.com/charmbracelet/log"
 	"os"
 	"time"
 )
@@ -40,7 +40,7 @@ func ReadIfExists(name string) (bool, []byte) {
 	} else if exists {
 		b, err := os.ReadFile(name)
 		if err != nil {
-			log.Printf("read file %s error: %s\n", name, err)
+			log.Errorf("read file %s error: %s", name, err)
 			return false, make([]byte, 0)
 		}
 

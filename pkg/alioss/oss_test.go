@@ -10,7 +10,7 @@ import (
 func TestBucketService_UpgradeCert(t *testing.T) {
 	credentialsProvider, err := oss.NewEnvironmentVariableCredentialsProvider()
 	if err != nil {
-		t.Fatalf("缺少OSS访问AccessKey环境变量配置: %s\n", err.Error())
+		t.Fatalf("缺少OSS访问AccessKey环境变量配置: %s", err.Error())
 	}
 
 	access := credentialsProvider.GetCredentials()

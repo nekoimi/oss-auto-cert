@@ -2,9 +2,8 @@ package utils
 
 import (
 	"bytes"
-	"fmt"
+	"github.com/charmbracelet/log"
 	"github.com/google/uuid"
-	"log"
 	"strings"
 	"time"
 )
@@ -16,7 +15,7 @@ func DateIsExpire(dateStr string, aheadHours time.Duration) bool {
 	// yyyy-MM-dd
 	target, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
-		log.Printf("日期解析异常: %s, %s\n", dateStr, err.Error())
+		log.Errorf("日期解析异常: %s, %s", dateStr, err.Error())
 		return false
 	}
 
@@ -29,7 +28,7 @@ func DateIsExpire(dateStr string, aheadHours time.Duration) bool {
 	// 目标时间比当前时间晚
 	// 获取当前时间到目标时间的剩余小时数
 	diff := target.Sub(now)
-	fmt.Printf("diff: %f, ahead: %f \n", diff.Hours(), aheadHours.Hours())
+	log.Debugf("diff: %f, ahead: %f", diff.Hours(), aheadHours.Hours())
 	// 剩余小时数是否小于提前过期小时数
 	// 如果小于 => 提前过期
 	return diff.Hours() < aheadHours.Hours()
@@ -39,7 +38,7 @@ func DateIsExpire(dateStr string, aheadHours time.Duration) bool {
 func TimeDiffDay(dateStr string) int {
 	target, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
-		log.Printf("日期解析异常: %s, %s\n", dateStr, err.Error())
+		log.Errorf("日期解析异常: %s, %s", dateStr, err.Error())
 		return 0
 	}
 

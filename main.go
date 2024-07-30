@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/charmbracelet/log"
 	"github.com/nekoimi/oss-auto-cert/config"
 	"github.com/nekoimi/oss-auto-cert/core"
 	"os"
@@ -15,6 +16,8 @@ var (
 )
 
 func init() {
+	log.SetLevel(log.DebugLevel)
+
 	flag.StringVar(&conf.Path, "config", "", "配置文件路径")
 	flag.Parse()
 

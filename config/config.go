@@ -1,9 +1,9 @@
 package config
 
 import (
+	"github.com/charmbracelet/log"
 	"gopkg.in/yaml.v3"
 	"io"
-	"log"
 	"os"
 )
 
@@ -45,19 +45,19 @@ func (conf *Config) LoadOptions() {
 
 	f, err := os.Open(conf.Path)
 	if err != nil {
-		log.Fatalf("读取配置文件 %s 出错: %s \n", conf.Path, err.Error())
+		log.Fatalf("读取配置文件 %s 出错: %s", conf.Path, err.Error())
 	}
 	defer f.Close()
 
 	bts, err := io.ReadAll(f)
 	if err != nil {
-		log.Fatalf("读取配置文件 %s 出错: %s \n", conf.Path, err.Error())
+		log.Fatalf("读取配置文件 %s 出错: %s", conf.Path, err.Error())
 	}
 
 	err = yaml.Unmarshal(bts, &conf)
 	if err != nil {
-		log.Fatalf("读取配置文件 %s 出错: %s \n", conf.Path, err.Error())
+		log.Fatalf("读取配置文件 %s 出错: %s", conf.Path, err.Error())
 	}
 
-	log.Printf("Config: %s\n", conf)
+	log.Debugf("配置文件: %s", conf)
 }
