@@ -16,8 +16,8 @@ type Manager struct {
 	buckets []config.Bucket
 	access  oss.Credentials
 	cas     *cas.Service
-	dcdn    *dcdn.DCDNOps
-	lego    *acme.Lego
+	dcdn    *dcdn.Service
+	lego    *acme.LegoService
 }
 
 func New(conf *config.Config) *Manager {

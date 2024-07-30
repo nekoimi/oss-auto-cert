@@ -24,14 +24,14 @@ import (
 // 保存路径格式: {SaveDir}/{domain}/
 const DefaultSaveDir = "/var/lib/oss-auto-cert"
 
-type Lego struct {
+type LegoService struct {
 	cmux    *sync.Mutex
 	saveDir string
 	user    registration.User
 	client  *lego.Client
 }
 
-func NewLego(acme config.Acme) *Lego {
+func NewLego(acme config.Acme) *LegoService {
 	user := newUser(acme.Email)
 	c := lego.NewConfig(user)
 
@@ -60,7 +60,7 @@ func NewLego(acme config.Acme) *Lego {
 		saveDir = DefaultSaveDir
 	}
 
-	return &Lego{
+	return &LegoService{
 		cmux:    new(sync.Mutex),
 		saveDir: acme.DataDir,
 		user:    user,
@@ -69,7 +69,7 @@ func NewLego(acme config.Acme) *Lego {
 }
 
 // Obtain 申请证书
-func (lg *Lego) Obtain(bucket string, domain string, ossClient *oss.Client) (*certificate.Resource, error) {
+func (lg *LegoService) Obtain(bucket string, domain string, ossClient *oss.Client) (*certificate.Resource, error) {
 	provider, err := oss_provider.NewHTTPProvider(bucket, ossClient)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (lg *Lego) Obtain(bucket string, domain string, ossClient *oss.Client) (*ce
 	return cert, nil
 }
 
-func (lg *Lego) save(cert *certificate.Resource) {
+func (lg *LegoService) save(cert *certificate.Resource) {
 	lg.cmux.Lock()
 	defer lg.cmux.Unlock()
 

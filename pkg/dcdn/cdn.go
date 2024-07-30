@@ -9,11 +9,11 @@ import (
 	"log"
 )
 
-type DCDNOps struct {
+type Service struct {
 	client *dcdn20180115.Client
 }
 
-func New(access oss.Credentials) *DCDNOps {
+func New(access oss.Credentials) *Service {
 	config := &openapi.Config{
 		AccessKeyId:     tea.String(access.GetAccessKeyID()),
 		AccessKeySecret: tea.String(access.GetAccessKeySecret()),
@@ -26,13 +26,13 @@ func New(access oss.Credentials) *DCDNOps {
 		log.Fatalln(err)
 	}
 
-	return &DCDNOps{
+	return &Service{
 		client: client,
 	}
 }
 
 // UpgradeCert 更新CDN加速域名证书
-func (d *DCDNOps) UpgradeCert(domain string, certID int64) error {
+func (d *Service) UpgradeCert(domain string, certID int64) error {
 	// 查询加速域名信息
 	request := new(dcdn20180115.DescribeDcdnDomainDetailRequest)
 	request.DomainName = tea.String(domain)
