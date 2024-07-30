@@ -79,10 +79,6 @@ func (lg *LegoService) Obtain(bucket string, domain string, ossClient *oss.Clien
 		return nil, err
 	}
 
-	if err = lg.client.Challenge.SetTLSALPN01Provider(provider); err != nil {
-		return nil, err
-	}
-
 	var cert *certificate.Resource
 
 	// 检查本地是否存在证书

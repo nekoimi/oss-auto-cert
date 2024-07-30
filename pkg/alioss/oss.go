@@ -84,7 +84,9 @@ func (b *BucketService) UpgradeCert(domain string, certID string) error {
 	putCname := oss.PutBucketCname{
 		Cname: domain,
 		CertificateConfiguration: &oss.CertificateConfiguration{
-			CertId: certID,
+			CertId:            certID,
+			Force:             true,
+			DeleteCertificate: false,
 		},
 	}
 	err := b.Client.PutBucketCnameWithCertificate(b.name, putCname)

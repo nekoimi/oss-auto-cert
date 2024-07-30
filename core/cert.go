@@ -82,6 +82,8 @@ func (m *Manager) Run() {
 				continue
 			}
 
+			log.Printf("证书上传信息: %s, ID-%d\n", cert, certID)
+
 			go func() {
 				// 更新OSS域名关联的证书
 				err := b.UpgradeCert(info.Domain, fmt.Sprintf("%d-%s", certID, info.Region))

@@ -65,6 +65,7 @@ func (s *Service) IsExpired(certID int64) (bool, error) {
 		return true, nil
 	} else {
 		log.Printf("证书(%s, %d)未过期，过期日期: %s, 还剩%d天\n", *detail.Name, certID, *detail.EndDate, utils.TimeDiffDay(*detail.EndDate))
+		// TODO 测试直接让证书过期
 		return false, nil
 	}
 }
