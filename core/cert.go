@@ -41,6 +41,10 @@ func New(conf *config.Config) *Manager {
 	}
 }
 
+func (m *Manager) Stop() {
+	m.lego.Stop()
+}
+
 func (m *Manager) Run() {
 	if m.running {
 		return

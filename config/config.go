@@ -71,8 +71,7 @@ func (conf *Config) LoadOptions() {
 		log.Fatalf("读取配置文件 %s 出错: %s", conf.Path, err.Error())
 	}
 
-	// 根据配置更新证书更新提前过期时间
-	expiredEarlyTime = time.Hour * 24 * time.Duration(max(15, conf.Acme.ExpiredEarly))
+	conf.setExpiredEarlyTime()
 
 	log.Debugf("配置文件: %s", conf)
 }
@@ -97,10 +96,16 @@ func (conf *Config) LoadOptionsFromEnv() {
 		} else {
 			conf.Acme.ExpiredEarly = valueInt
 			log.Debugf("set acme (expired early) from env: %d", valueInt)
+			conf.setExpiredEarlyTime()
 		}
 	}
 
 	log.Debugf("配置文件: %s", conf)
+}
+
+func (conf *Config) setExpiredEarlyTime() {
+	// 根据配置更新证书更新提前过期时间
+	expiredEarlyTime = time.Hour * 24 * time.Duration(max(15, conf.Acme.ExpiredEarly))
 }
 
 func GetExpiredEarlyTime() time.Duration {

@@ -142,6 +142,13 @@ func (lg *LegoService) Obtain(bucket string, domain string, ossClient *oss.Clien
 	return cert, nil
 }
 
+func (lg *LegoService) Stop() {
+	err := lg.client.Registration.DeleteRegistration()
+	if err != nil {
+		log.Errorf(err.Error())
+	}
+}
+
 func (lg *LegoService) save(cert *certificate.Resource) {
 	lg.cmux.Lock()
 	defer lg.cmux.Unlock()

@@ -47,6 +47,7 @@ func main() {
 	for {
 		select {
 		case <-sig:
+			m.Stop()
 			tick.Stop()
 			log.Infof("Exit.")
 			os.Exit(0)
