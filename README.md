@@ -19,7 +19,7 @@
 webhook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxx-xxxxx-xxxxx-xxxxxx-xxxxxxx
 # 证书申请配置
 acme:
-  email: 邮箱地址
+  email: 申请证书邮箱地址（可以收到域名证书相关通知）
   data-dir: 申请的证书文件保存目录（绝对路径）
   expired-early: 15 # 证书提前过期时间，单位：天（默认提前15天过期）
 # 阿里云OSS配置 Bucket信息列表
@@ -36,10 +36,17 @@ buckets:
 
 ##### 环境变量配置说明
 
-- OSS_ACCESS_KEY_ID：阿里云accessKeyID，必须
+环境变量配置优先级最高，如果同时配置了环境变量和yaml，将以环境变量为准。
 
-- OSS_ACCESS_KEY_SECRET：阿里云accessKeySecret，必须
+- OSS_ACCESS_KEY_ID：阿里云accessKeyID，必须，只能通过环境变量设置
 
+- OSS_ACCESS_KEY_SECRET：阿里云accessKeySecret，必须，只能通过环境变量设置
+
+- ACME_EMAIL：申请证书邮箱地址（可以收到域名证书相关通知）
+
+- ACME_DATA_DIR：申请的证书文件保存目录（绝对路径）
+
+- ACME_EXPIRED_EARLY：证书提前过期时间，单位：天（默认提前15天过期）
 
 ##### 运行参数配置说明
 
@@ -97,6 +104,10 @@ services:
     environment:
       OSS_ACCESS_KEY_ID: xxx
       OSS_ACCESS_KEY_SECRET: xxx
+      ACME_EMAIL: xxxxx@xxxxxx.com
+      ACME_DATA_DIR: /data
+      ACME_EXPIRED_EARLY: 15
+
 ```
 
 ### Systemd部署
