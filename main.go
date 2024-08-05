@@ -31,6 +31,7 @@ func init() {
 	}
 
 	conf.LoadOptions()
+	conf.LoadOptionsFromEnv()
 
 	watchSig()
 }

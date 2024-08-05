@@ -15,3 +15,6 @@ services:
     environment:
       OSS_ACCESS_KEY_ID: xxx
       OSS_ACCESS_KEY_SECRET: xxx
+      ACME_EMAIL: xxxxx@xxxxxx.com
+      ACME_DATA_DIR: /data
+      ACME_EXPIRED_EARLY: 15

@@ -5,6 +5,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -72,6 +73,32 @@ func (conf *Config) LoadOptions() {
 
 	// 根据配置更新证书更新提前过期时间
 	expiredEarlyTime = time.Hour * 24 * time.Duration(max(15, conf.Acme.ExpiredEarly))
+
+	log.Debugf("配置文件: %s", conf)
+}
+
+func (conf *Config) LoadOptionsFromEnv() {
+	value := os.Getenv("ACME_EMAIL")
+	if value != "" {
+		conf.Acme.Email = value
+		log.Debugf("set acme (email) from env: %s", value)
+	}
+
+	value = os.Getenv("ACME_DATA_DIR")
+	if value != "" {
+		conf.Acme.DataDir = value
+		log.Debugf("set acme (data dir) from env: %s", value)
+	}
+
+	value = os.Getenv("ACME_EXPIRED_EARLY")
+	if value != "" {
+		if valueInt, err := strconv.Atoi(value); err != nil {
+			log.Warnf(err.Error())
+		} else {
+			conf.Acme.ExpiredEarly = valueInt
+			log.Debugf("set acme (expired early) from env: %d", valueInt)
+		}
+	}
 
 	log.Debugf("配置文件: %s", conf)
 }
