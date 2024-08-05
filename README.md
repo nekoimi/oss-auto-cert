@@ -21,6 +21,7 @@ webhook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxx-xxxxx-xxxxx
 acme:
   email: 邮箱地址
   data-dir: 申请的证书文件保存目录（绝对路径）
+  expired-early: 15 # 证书提前过期时间，单位：天（默认提前15天过期）
 # 阿里云OSS配置 Bucket信息列表
 buckets:
   - name: bucket名称1
