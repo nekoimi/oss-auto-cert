@@ -59,7 +59,11 @@ buckets:
 
 ### Docker部署（推荐）
 
-最新稳定版本容器镜像: `ghcr.io/nekoimi/oss-auto-cert:alpine`
+最新稳定版本容器镜像:
+
+dockerhub: `nekoimi/oss-auto-cert:latest`
+
+ghcr.io: `ghcr.io/nekoimi/oss-auto-cert:latest`
 
 ```shell
 # 运行例子:
