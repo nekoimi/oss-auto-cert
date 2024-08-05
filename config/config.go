@@ -10,8 +10,11 @@ import (
 
 const (
 	DefaultConfigPath = "/etc/oss-auto-cert/config.yaml"
-	// ExpiredEarly 提前过期时间点
-	ExpiredEarly = time.Hour * 24 * 5
+)
+
+var (
+	// expiredEarlyTime 提前过期时间点 默认15天
+	expiredEarlyTime = time.Hour * 24 * 15
 )
 
 type Config struct {
@@ -32,6 +35,9 @@ type Acme struct {
 
 	// 证书保存位置
 	DataDir string `yaml:"data-dir"`
+
+	// 证书提前renew时间
+	ExpiredEarly int `yaml:"expired-early"`
 }
 
 // Bucket OSS存储Bucket配置
@@ -64,5 +70,12 @@ func (conf *Config) LoadOptions() {
 		log.Fatalf("读取配置文件 %s 出错: %s", conf.Path, err.Error())
 	}
 
+	// 根据配置更新证书更新提前过期时间
+	expiredEarlyTime = time.Hour * 24 * time.Duration(max(15, conf.Acme.ExpiredEarly))
+
 	log.Debugf("配置文件: %s", conf)
+}
+
+func GetExpiredEarlyTime() time.Duration {
+	return expiredEarlyTime
 }

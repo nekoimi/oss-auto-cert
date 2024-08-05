@@ -110,7 +110,7 @@ func (d *Service) IsExpired(domain string) (bool, error) {
 	log.Debugf("证书签发的CA名称: %s", *info.CertOrg)
 
 	// 检查证书是否过期
-	if !utils.TimeIsExpire(*info.CertExpireTime, config.ExpiredEarly) {
+	if !utils.TimeIsExpire(*info.CertExpireTime, config.GetExpiredEarlyTime()) {
 		expireDate := *info.CertExpireTime
 		if t, err := utils.StrToTime(*info.CertExpireTime); err != nil {
 			log.Warnf(err.Error())

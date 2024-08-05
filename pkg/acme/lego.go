@@ -40,8 +40,10 @@ func NewLego(acme config.Acme) *LegoService {
 	if debug == "true" {
 		// 演示
 		// 测试环境下就用 lego.LEDirectoryStaging
+		log.Warnf("Lego CA-Dir use staging")
 		c.CADirURL = lego.LEDirectoryStaging
 	} else {
+		log.Infof("Lego CA-Dir use production")
 		c.CADirURL = lego.LEDirectoryProduction
 	}
 	c.Certificate.KeyType = certcrypto.RSA2048
