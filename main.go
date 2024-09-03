@@ -42,7 +42,7 @@ func watchSig() {
 
 func main() {
 	m := core.New(conf)
-
+	go m.Run()
 	tick := time.NewTicker(6 * time.Hour)
 	for {
 		select {
