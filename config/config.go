@@ -24,6 +24,8 @@ type Config struct {
 	Path string
 	// 通知地址
 	Webhook string `yaml:"webhook"`
+	// 通知消息模版
+	WebhookTpl string `yaml:"webhook-tpl"`
 	// Acme配置
 	Acme Acme `yaml:"acme"`
 	// Bucket配置

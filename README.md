@@ -15,13 +15,33 @@
 - 完整yaml配置示例:
 
 ```yaml
-# 企业微信机器人webhook地址
+# 消息通知webhook地址
 webhook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxx-xxxxx-xxxxx-xxxxxx-xxxxxxx
+# 消息通知内容go模版，将模版内容渲染后，作为POST请求的body内容发送到`webhook`地址
+# 模版唯一变量：`Message` - 消息内容
+### 企业微信机器人文本消息示例配置：
+### 参考文档：https://developer.work.weixin.qq.com/document/path/91770#%E6%96%87%E6%9C%AC%E7%B1%BB%E5%9E%8B
+webhook-tpl: |
+  {
+    "msgtype": "text",
+    "text": {
+      "content": "{{ .Message }}"
+    }
+  }
+#### 钉钉机器人文本消息示例配置：
+#### 参考文档：https://open.dingtalk.com/document/orgapp/custom-robot-access#title-nfv-794-g71
+#webhook-tpl: |
+#  {
+#    "msgtype": "text",
+#    "text": {
+#      "content":"{{ .Message }}"
+#    }
+#  }
 # 证书申请配置
 acme:
   email: 申请证书邮箱地址（可以收到域名证书相关通知）
   data-dir: 申请的证书文件保存目录（绝对路径）
-  expired-early: 15 # 证书提前过期时间，单位：天（默认提前15天过期）
+  expired-early: 30 # 证书提前过期时间，单位：天（默认提前15天过期）
 # 阿里云OSS配置 Bucket信息列表
 buckets:
   - name: bucket名称1

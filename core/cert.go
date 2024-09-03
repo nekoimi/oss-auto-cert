@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/nekoimi/oss-auto-cert/config"
 	"github.com/nekoimi/oss-auto-cert/notifications"
-	"github.com/nekoimi/oss-auto-cert/notifications/wxwork"
+	"github.com/nekoimi/oss-auto-cert/notifications/webhook"
 	"github.com/nekoimi/oss-auto-cert/pkg/acme"
 	"github.com/nekoimi/oss-auto-cert/pkg/alioss"
 	"github.com/nekoimi/oss-auto-cert/pkg/cas"
@@ -37,7 +37,7 @@ func New(conf *config.Config) *Manager {
 		cas:        cas.New(access),
 		cdn:        cdn.New(access),
 		lego:       acme.NewLego(conf.Acme),
-		notifiable: wxwork.New(conf.Webhook),
+		notifiable: webhook.New(conf.Webhook, conf.WebhookTpl),
 	}
 }
 
@@ -121,4 +121,8 @@ func (m *Manager) Run() {
 			}()
 		}
 	}
+}
+
+func (m *Manager) Send() {
+	m.notifiable.Notify("测试")
 }
