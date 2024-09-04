@@ -62,7 +62,8 @@ func (s *Service) IsExpired(certID int64) (bool, error) {
 		log.Warnf("证书(%s, %d)过期，需要更换新证书", *detail.Name, certID)
 		return true, nil
 	} else {
-		log.Infof("证书(%s, %d)未过期，过期日期: %s, 还剩%d天", *detail.Name, certID, *detail.EndDate, utils.TimeDiffDay(*detail.EndDate))
+		log.Infof("证书(%s, %d)未过期，过期日期: %s, 还剩%d天, 将提前%d天过期", *detail.Name, certID, *detail.EndDate,
+			utils.TimeDiffDay(*detail.EndDate), config.GetExpiredEarlyDay())
 		return false, nil
 	}
 }

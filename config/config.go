@@ -10,12 +10,15 @@ import (
 )
 
 const (
-	DefaultConfigPath = "/etc/oss-auto-cert/config.yaml"
+	DefaultExpiredEarly = 15
+	DefaultConfigPath   = "/etc/oss-auto-cert/config.yaml"
 )
 
 var (
-	// expiredEarlyTime 提前过期时间点 默认15天
-	expiredEarlyTime = time.Hour * 24 * 15
+	// expiredEarlyDay 提前过期时间点 默认15天
+	expiredEarlyDay = DefaultExpiredEarly
+	// expiredEarlyTime 提前过期时间
+	expiredEarlyTime = time.Hour * 24 * DefaultExpiredEarly
 )
 
 type Config struct {
@@ -107,7 +110,12 @@ func (conf *Config) LoadOptionsFromEnv() {
 
 func (conf *Config) setExpiredEarlyTime() {
 	// 根据配置更新证书更新提前过期时间
-	expiredEarlyTime = time.Hour * 24 * time.Duration(max(15, conf.Acme.ExpiredEarly))
+	expiredEarlyDay = max(DefaultExpiredEarly, conf.Acme.ExpiredEarly)
+	expiredEarlyTime = time.Hour * 24 * time.Duration(expiredEarlyDay)
+}
+
+func GetExpiredEarlyDay() int {
+	return expiredEarlyDay
 }
 
 func GetExpiredEarlyTime() time.Duration {

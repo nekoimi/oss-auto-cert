@@ -30,7 +30,7 @@ func New(conf *config.Config) *Manager {
 	}
 
 	access := credentialsProvider.GetCredentials()
-	return &Manager{
+	m := &Manager{
 		running:    false,
 		buckets:    conf.Buckets,
 		access:     access,
@@ -39,6 +39,16 @@ func New(conf *config.Config) *Manager {
 		lego:       acme.NewLego(conf.Acme),
 		notifiable: webhook.New(conf.Webhook, conf.WebhookTpl),
 	}
+
+	if len(m.buckets) <= 0 {
+		log.Warnf("OSS存储Bucket配置为空!")
+	} else {
+		for _, b := range m.buckets {
+			log.Debugf("Bucket开启监测: %s => %s", b.Name, b.Endpoint)
+		}
+	}
+
+	return m
 }
 
 func (m *Manager) Stop() {
@@ -56,6 +66,8 @@ func (m *Manager) Run() {
 	}()
 
 	for _, bucket := range m.buckets {
+		log.Debugf("开始检测Bucket: %s ...", bucket.Name)
+
 		b, err := alioss.New(bucket, m.access)
 		if err != nil {
 			log.Errorf(err.Error())
