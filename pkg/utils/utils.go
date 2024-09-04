@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/charmbracelet/log"
 	"github.com/google/uuid"
+	"os"
 	"strings"
 	"time"
 )
@@ -25,7 +26,7 @@ func StrToTime(s string) (time.Time, error) {
 	for _, layout := range timeLayouts {
 		target, err = time.Parse(layout, s)
 		if err != nil {
-			log.Warnf("format str to time err: layout %s for %s, %s", layout, s, err.Error())
+			log.Debugf("format str to time err: layout %s for %s, %s", layout, s, err.Error())
 		} else {
 			break
 		}
@@ -57,8 +58,11 @@ func TimeIsExpire(s string, aheadHours time.Duration) bool {
 	// 剩余小时数是否小于提前过期小时数
 	// 如果小于 => 提前过期
 
-	//// TODO 测试直接让证书过期
-	//return true
+	debug := os.Getenv("DEBUG")
+	if debug == "true" {
+		// 测试直接让证书过期
+		return true
+	}
 
 	return diff.Hours() < aheadHours.Hours()
 }

@@ -36,7 +36,7 @@ func NewLego(acme config.Acme) *LegoService {
 	c := lego.NewConfig(user)
 
 	// 此处配置密钥的类型和密钥申请的地址，记得上线后替换成 lego.LEDirectoryProduction
-	debug := os.Getenv("LEGO_DEBUG")
+	debug := os.Getenv("DEBUG")
 	if debug == "true" {
 		// 演示
 		// 测试环境下就用 lego.LEDirectoryStaging
