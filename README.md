@@ -19,6 +19,7 @@
 webhook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxx-xxxxx-xxxxx-xxxxxx-xxxxxxx
 # 消息通知内容go模版，将模版内容渲染后，作为POST请求的body内容发送到`webhook`地址
 # 模版唯一变量：`Message` - 消息内容
+# 不配置默认使用企业微信机器人的消息模版，如下：
 ### 企业微信机器人文本消息示例配置：
 ### 参考文档：https://developer.work.weixin.qq.com/document/path/91770#%E6%96%87%E6%9C%AC%E7%B1%BB%E5%9E%8B
 webhook-tpl: |
@@ -28,6 +29,7 @@ webhook-tpl: |
       "content": "{{ .Message }}"
     }
   }
+
 #### 钉钉机器人文本消息示例配置：
 #### 参考文档：https://open.dingtalk.com/document/orgapp/custom-robot-access#title-nfv-794-g71
 #webhook-tpl: |
@@ -37,6 +39,7 @@ webhook-tpl: |
 #      "content":"{{ .Message }}"
 #    }
 #  }
+
 # 证书申请配置
 acme:
   email: 申请证书邮箱地址（可以收到域名证书相关通知）
@@ -67,6 +70,11 @@ buckets:
 - ACME_DATA_DIR：申请的证书文件保存目录（绝对路径）
 
 - ACME_EXPIRED_EARLY：证书提前过期时间，单位：天（默认提前15天过期）
+
+- DEBUG：调试模式，默认关闭
+    - 证书检测会直接为过期
+    - true - 开启调试，使用`LEDirectoryStaging`环境
+    - false - 关闭调试，使用`LEDirectoryProduction`环境
 
 ##### 运行参数配置说明
 
@@ -132,7 +140,7 @@ services:
 
 ### Systemd部署
 
-- 下载最新版本：[`release`](https://github.com/nekoimi/oss-auto-cert/releases) 
+- 下载最新版本：[`release`](https://github.com/nekoimi/oss-auto-cert/releases)
 
 - 创建配置文件：`/etc/oss-auto-cert/config.yaml`
 
