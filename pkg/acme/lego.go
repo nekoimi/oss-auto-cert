@@ -70,7 +70,7 @@ func NewLego(acme config.Acme) *LegoService {
 
 	return &LegoService{
 		cmux:    new(sync.Mutex),
-		saveDir: acme.DataDir,
+		saveDir: saveDir,
 		user:    user,
 		client:  client,
 	}
