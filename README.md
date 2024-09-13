@@ -127,7 +127,6 @@ services:
     volumes:
       - $PWD/config.yaml:/etc/oss-auto-cert/config.yaml
       - $PWD/certs:/var/lib/oss-auto-cert
-    privileged: true
     restart: unless-stopped
     environment:
       OSS_ACCESS_KEY_ID: xxx
