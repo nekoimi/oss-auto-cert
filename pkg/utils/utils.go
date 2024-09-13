@@ -35,11 +35,22 @@ func StrToTime(s string) (time.Time, error) {
 	return target, err
 }
 
-// TimeIsExpire 是否过期
+// DateIsExpire 日期是否过期
+// dateStr 日期字符串，格式：2006-01-02
 // aheadHours 提前过期时间
-func TimeIsExpire(s string, aheadHours time.Duration) bool {
+func DateIsExpire(dateStr string, aheadHours time.Duration) bool {
 	now := time.Now()
-	target, err := StrToTime(s)
+
+	// 字符串转成时间对象
+	target, err := StrToTime(dateStr)
+	if err != nil {
+		log.Errorf(err.Error())
+		return false
+	}
+
+	// fix: 上述转换格式可能不是 time.DateOnly 格式
+	// 需要主动转换成 time.DateOnly 格式，避免因为时间导致比较不一致问题
+	target, err = time.Parse(time.DateOnly, target.Format(time.DateOnly))
 	if err != nil {
 		log.Errorf(err.Error())
 		return false
@@ -64,7 +75,7 @@ func TimeIsExpire(s string, aheadHours time.Duration) bool {
 		return true
 	}
 
-	return diff.Hours() < aheadHours.Hours()
+	return diff.Hours() <= aheadHours.Hours()
 }
 
 // TimeDiffDay 获取当前时间到目标时间相差的天数

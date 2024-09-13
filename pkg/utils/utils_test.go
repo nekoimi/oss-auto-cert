@@ -16,8 +16,9 @@ func TestCasID(t *testing.T) {
 }
 
 func TestExpire(t *testing.T) {
-	t.Log(TimeIsExpire("2024-07-27", time.Hour*3))
-	t.Log(TimeIsExpire("2024-10-13T23:59:59Z", time.Second))
+	t.Log(DateIsExpire("2024-07-27", time.Hour*3))
+	t.Log(DateIsExpire("2024-10-13T23:59:59Z", time.Hour*24*time.Duration(30)))
+	t.Log(DateIsExpire("2024-10-13", time.Hour*24*time.Duration(30)))
 }
 
 func TestShortDomain(t *testing.T) {
