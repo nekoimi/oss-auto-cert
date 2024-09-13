@@ -123,7 +123,7 @@ webhook-tpl: |
 - 调试模式环境变量:
 
   - DEBUG：调试模式，默认false
-      - true - 开启调试，证书过期检测会直接为过期，使用`LEDirectoryStaging`环境申请证书
+      - true - 开启调试，证书过期检测会直接为过期，使用`LEDirectoryStaging`环境申请证书，用来测试
       - false - 关闭调试，证书过期检测计算具体的过期时间，使用`LEDirectoryProduction`环境申请证书
 
 ##### 运行参数配置说明
