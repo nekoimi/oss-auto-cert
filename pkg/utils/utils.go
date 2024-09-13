@@ -75,7 +75,7 @@ func DateIsExpire(dateStr string, aheadHours time.Duration) bool {
 		return true
 	}
 
-	return diff.Hours() < aheadHours.Hours()
+	return diff.Hours() <= aheadHours.Hours()
 }
 
 // TimeDiffDay 获取当前时间到目标时间相差的天数
