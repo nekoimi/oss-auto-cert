@@ -3,6 +3,7 @@ package cert
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -13,6 +14,11 @@ import (
 	"github.com/nekoimi/oss-auto-cert/internal/config"
 	"github.com/nekoimi/oss-auto-cert/pkg/webhook"
 )
+
+// ScheduleInterval 证书巡检定时周期，与 ScheduleRun 中 Ticker 间隔一致。
+const ScheduleInterval = 6 * time.Hour
+
+const maxBucketNamesInInfoLog = 5
 
 type AutoCert struct {
 	ctx           context.Context
@@ -47,9 +53,17 @@ func NewAutoCert(ctx context.Context, conf *config.Config) (*AutoCert, error) {
 	if len(c.buckets) <= 0 {
 		log.Warnf("OSS存储Bucket配置为空!")
 	} else {
+		names := make([]string, 0, len(c.buckets))
 		for _, b := range c.buckets {
+			names = append(names, b.Name)
 			log.Debugf("Bucket开启监测: %s => %s", b.Name, b.Endpoint)
 		}
+		summary := strings.Join(names, ", ")
+		if len(c.buckets) > maxBucketNamesInInfoLog {
+			summary = strings.Join(names[:maxBucketNamesInInfoLog], ", ") +
+				fmt.Sprintf(" 等共 %d 个", len(c.buckets))
+		}
+		log.Infof("已加载 %d 个待监测 Bucket: %s", len(c.buckets), summary)
 	}
 
 	if conf.Webhook != "" {
@@ -72,6 +86,11 @@ func (c *AutoCert) withMessageHandle(messageHandle func(message string)) {
 }
 
 func (c *AutoCert) ScheduleRun() {
+	log.Infof(
+		"定时调度已启动：证书检查间隔为 %s；启动后将立即执行一次巡检，此后按间隔重复执行",
+		ScheduleInterval,
+	)
+
 	go func() {
 		for {
 			select {
@@ -86,7 +105,9 @@ func (c *AutoCert) ScheduleRun() {
 	}()
 
 	go func() {
-		tick := time.NewTicker(6 * time.Hour)
+		go c.run()
+		tick := time.NewTicker(ScheduleInterval)
+		defer tick.Stop()
 		for {
 			select {
 			case <-c.ctx.Done():
@@ -111,6 +132,10 @@ func (c *AutoCert) run() {
 	defer func() {
 		c.running.Store(false)
 	}()
+
+	if len(c.buckets) > 0 {
+		log.Infof("开始执行证书巡检，共 %d 个 Bucket", len(c.buckets))
+	}
 
 	for _, bucket := range c.buckets {
 		log.Debugf("开始检测Bucket: %s ...", bucket.Name)

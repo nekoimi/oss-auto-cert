@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/charmbracelet/log"
@@ -44,6 +45,27 @@ func main() {
 	}
 
 	m.ScheduleRun()
+
+	log.Infof("oss-auto-cert 服务已成功启动，进程常驻运行中")
+	log.Infof("配置文件路径: %s", conf.Path)
+	switch n := len(conf.Buckets); {
+	case n == 0:
+		log.Warnf("当前未配置任何 Bucket，请检查配置文件中的 buckets 段")
+	case n <= 5:
+		names := make([]string, 0, n)
+		for _, b := range conf.Buckets {
+			names = append(names, b.Name)
+		}
+		log.Infof("监控 Bucket（%d）: %s", n, strings.Join(names, ", "))
+	default:
+		names := make([]string, 0, 5)
+		for i := 0; i < 5; i++ {
+			names = append(names, conf.Buckets[i].Name)
+		}
+		log.Infof("监控 Bucket 共 %d 个: %s 等", n, strings.Join(names, ", "))
+	}
+	log.Infof("调度说明: 启动时已触发一次巡检；之后每隔 %s 自动巡检一次", cert.ScheduleInterval)
+	log.Infof("退出方式: 发送 SIGINT、SIGTERM 或 SIGQUIT 可优雅退出")
 
 	// wait
 	select {
