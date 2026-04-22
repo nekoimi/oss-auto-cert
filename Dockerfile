@@ -1,12 +1,14 @@
-FROM golang:1.23-alpine as builder
+FROM golang:1.25-alpine AS builder
 
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
 
 WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
-RUN go install
 RUN go build --ldflags "-extldflags -static -s -w" -o oss-auto-cert main.go
 
 FROM alpine:latest
