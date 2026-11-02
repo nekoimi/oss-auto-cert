@@ -2,7 +2,7 @@
 
 日期：2026-11-02。
 
-状态：已按本方案实现首版重构，使用方法见 [使用文档](usage.md)，已执行的检查见 [验证记录](refactoring-validation.md)。本文保留设计合同；本地验证不等同于真实云端签发与部署验收。
+状态：已按本方案实现首版重构，使用方法见 [使用文档](usage.md)，已执行的检查见 [验证记录](refactoring-validation.md)。本文保留设计合同；本地验证不等同于真实云端签发与部署验收。日志参数及输出规则见 [日志说明](logging.md)。
 
 首版实现包括 Cobra 命令、TOML / YAML 统一配置、旧参数兼容、账户及证书存储、独立部署恢复、通知和发布流程。HTTP-01 验证实现放在 `internal/provider/acme`，未单独拆出 `challenge` 包。CAS 上传结果无法确定时暂停任务并提示核对，暂未提供人工状态修复命令。超出新版约束的旧配置在迁移时须明确报错，原 YAML 仍按兼容规则运行。
 
@@ -249,58 +249,48 @@ events = ["updated", "failed", "recovered"]
 
 `allow-initial-issuance` 只授权首次为已绑定域名配置证书。`cdn = "auto"` 不授权开启新的 CDN HTTPS。显式 `oss = false` 时仍可使用 Bucket 放置验证文件，CAS 上传是否需要由实际部署计划决定。
 
-## 6. 目标代码结构
+## 6. 代码结构与依赖
 
-以下为目标布局，实施时可以按实际职责调整文件拆分。目录变化不能破坏已约定的配置、运行参数、模块路径及兼容构建入口。
+以下为首版实现布局，省略测试文件。CLI 命令集中在 root.go，配置文件模型和适配集中在 load.go，周期与重试调度由 app.go 负责；HTTP-01 实现位于 provider/acme。后续可按职责继续拆分，目录变化不能破坏已约定的配置、运行参数、模块路径及兼容构建入口。
 
 ```text
 main.go                         兼容旧构建命令的薄入口
-cmd/
-  oss-auto-cert/
-    main.go                     推荐构建入口、进程退出码
+cmd/oss-auto-cert/main.go       推荐构建入口、进程退出码
 internal/
-  cli/
-    root.go                     Cobra 根命令、全局参数
-    run.go                      常驻、单轮、预演命令
-    check.go                    只读云端检查
-    status.go                   本地运行状态
-    config.go                   init / validate / migrate 子命令
-    version.go                  离线版本信息
-    compat.go                   旧单横线参数适配
-  app/                          依赖组装、命令用例与生命周期
+  cli/root.go                   Cobra 命令、全局参数及旧参数适配
+  app/app.go                    依赖组装、巡检调度、生命周期与退出码
   config/
-    legacy.go                   旧 YAML 数据结构与解析
-    toml.go                     TOML v2 数据结构与解析
-    adapt.go                    转统一配置、兼容默认值
-    load.go                     文件选择、覆盖来源
-    validate.go                 校验与诊断
-    migrate.go                  迁移导出
+    config.go                   统一配置、默认值、校验及归一化
+    load.go                     TOML / YAML 模型、适配、加载及迁移
   certificate/
-    service.go                  单轮执行、任务生命周期
-    planner.go                  比较实际状态并制定执行计划
-    scheduler.go                周期与重试调度
-    model.go                    证书、计划、部署结果
+    service.go                  单轮执行、计划、逐目标核验及重试
+    deployment.go               证书准备、上传恢复及目标部署
+    model.go                    证书、状态与基础设施接口
+    logging.go                  业务阶段日志
   provider/
-    acme/                       lego 适配、Let's Encrypt、账户复用
-    aliyun/                     OSS、CDN、CAS 适配
-  challenge/
-    osshttp/                    OSS HTTP-01 验证文件管理
+    acme/issuer.go              lego、账户复用与 OSS HTTP-01
+    aliyun/cloud.go             OSS、CDN、CAS 适配
   storage/                      账户、证书、状态、锁和旧文件导入
   notification/                 内置通知及自定义模板
+  logging/                      logrus TextFormatter、等级和颜色策略
+  testutil/                     离线测试证书
+examples/config.full.toml       完整 TOML 配置示例
 docs/
-  refactoring-plan.md           本方案
-  usage.md                      使用与迁移说明
+  refactoring-plan.md           本方案与实现边界
+  refactoring-validation.md     已执行的验证记录
+  usage.md                      使用、迁移及恢复说明
+  logging.md                    日志等级、颜色与日志保存
 ```
 
 `cmd/oss-auto-cert/main.go` 与根目录 `main.go` 均只委托同一个 CLI 执行入口，处理最终退出码，不复制命令注册或业务实现。推荐使用 `go build -o oss-auto-cert ./cmd/oss-auto-cert`，同时保留 `go build -o oss-auto-cert main.go` 和 `go build .`。
 
 依赖方向为 CLI 调用应用层用例，应用层组装配置、业务服务和适配器，业务层通过小接口调用签发、发现、上传、部署、存储和通知。`certificate` 不依赖 Cobra、具体 SDK 或存储实现。接口放在使用它的包内，避免扩张一个承担所有职责的 `types` 包。SDK 响应在适配层转换为业务模型，不穿透到调度和计划层。
 
-当前 `pkg/webhook` 和 `pkg/utils` 的实现按职责迁入内部包，通用逻辑优先放在使用它的包内，不创建新的万能工具包。旧的 Go 导入 API 不属于配置与命令行兼容合同；如删除现有导出包，需要在发布说明中说明源码 API 变化。
+旧 `pkg/webhook` 和 `pkg/utils` 已按职责迁入内部包并删除，通用逻辑优先放在使用它的包内，不创建新的万能工具包。旧的 Go 导入 API 不属于配置与命令行兼容合同；源码 API 变化已列入 [变更记录](../CHANGELOG.md)。
 
 构造函数只验证参数、创建本地对象，返回错误；网络读取和写入由明确的方法执行。使用 github.com/sirupsen/logrus 的 TextFormatter，日志按等级着色并写入 stderr，通过独立实例注入；日志与用户消息使用中文，错误通过 `%w` 保留根因。
 
-TOML 解析建议采用 `github.com/pelletier/go-toml/v2`，旧 YAML 继续使用现有解析库。CLI 使用 `github.com/spf13/cobra` 及其 pflag 参数能力；本轮不引入 Viper，避免配置优先级和旧版转换规则分散在多个框架中。
+TOML 解析采用 `github.com/pelletier/go-toml/v2`，旧 YAML 继续使用现有解析库。CLI 使用 `github.com/spf13/cobra` 及其 pflag 参数能力；本轮不引入 Viper，避免配置优先级和旧版转换规则分散在多个框架中。
 
 ## 7. 巡检、签发与部署
 
@@ -389,13 +379,14 @@ SDK 适配层设置连接和读写超时；支持 context 的调用必须传递 
 
 模板兼容保证旧模板能够加载、旧变量可以使用，不保证继续发送本来不合法的 JSON。配置迁移需用包含换行和引号的测试消息渲染预览，报告存在的问题，但不向真实 Webhook 发送测试消息。
 
-日志默认输出资源名、域名、阶段、结果和下一步建议，详细 SDK 信息放入脱敏 debug 日志。区分“未使用 CDN”“未开启 HTTPS”“更新已提交”“更新已核验”和“更新失败”，不能将跳过显示为更新成功。
+日志默认输出资源名、域名、阶段、结果和下一步建议，debug 日志补充资源发现和计划阶段，不输出 SDK 原始响应或凭证。区分“未使用 CDN”“未开启 HTTPS”“更新已提交”“更新已核验”和“更新失败”，不能将跳过显示为更新成功。
 
-示例输出：
+禁用颜色时的 TextFormatter 输出示意（时间、资源和耗时仅作示例）：
 
 ```text
-巡检完成：发现 5 个域名，3 个正常，1 个更新成功，1 个部署待重试。
-static.example.com：OSS 已核验；CDN 请求超时，1 分钟后重试。
+time="2026-11-02 12:00:00" level=info msg="开始巡检" buckets=1 dry_run=false environment=production force=false
+time="2026-11-02 12:00:02" level=error msg="处理失败" bucket=my-bucket detail="CDN: 请求超时" domain=static.example.com
+time="2026-11-02 12:00:02" level=warning msg="巡检完成，存在失败或待重试任务" duration=2s failed=1 total=1
 ```
 
 通知按域名和执行结果聚合，避免每次重试重复发送相同故障；故障恢复单独通知。无通知配置时仍保留完整本地运行结果。
@@ -416,7 +407,7 @@ oss-auto-cert                   无子命令时执行常驻运行
     └── migrate
 ```
 
-`--config` 和 `--log-level` 注册为根命令的持久参数。运行选项注册到 `run` 命令，配置生成、迁移等选项注册到各自子命令，避免不相关命令接受运行写入选项。`version` 子命令及 `--version` 均离线可用。
+`--config`、`--log-level` 和 `--color` 注册为根命令的持久参数。运行选项注册到 `run` 命令，配置生成、迁移等选项注册到各自子命令，避免不相关命令接受运行写入选项。`version` 子命令及 `--version` 均离线可用。
 
 ### 10.2 命令行为
 

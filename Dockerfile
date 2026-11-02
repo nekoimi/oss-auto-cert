@@ -15,8 +15,10 @@ RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags "-s -w -X gith
 FROM alpine:latest
 
 LABEL maintainer="nekoimi <nekoimime@gmail.com>"
+LABEL org.opencontainers.image.licenses="MIT"
 
 COPY --from=builder /build/oss-auto-cert   /usr/bin/oss-auto-cert
+COPY LICENSE /usr/share/licenses/oss-auto-cert/LICENSE
 
 RUN apk add --no-cache ca-certificates tzdata \
     && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \

@@ -7,6 +7,7 @@
 - **语言**: Go 1.25.0（发布使用最新补丁版本）
 - **模块**: `github.com/nekoimi/oss-auto-cert`
 - **用途**: 基于 Let's Encrypt 实现阿里云 OSS/CDN SSL 证书自动管理
+- **许可证**: MIT，见 [LICENSE](LICENSE)
 
 ## 构建命令
 
@@ -15,7 +16,7 @@
 go build -o oss-auto-cert ./cmd/oss-auto-cert
 
 # 生产环境构建（静态链接）
-go build --ldflags "-extldflags -static -s -w" -o oss-auto-cert ./cmd/oss-auto-cert
+CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o oss-auto-cert ./cmd/oss-auto-cert
 
 # 安装依赖
 go mod tidy && go mod download
@@ -23,6 +24,8 @@ go mod tidy && go mod download
 # 运行应用
 ./oss-auto-cert run --config=/path/to/config.toml --log-level=info
 ```
+
+上述环境变量内联写法适用于 Bash；PowerShell 可先执行 `$env:CGO_ENABLED = "0"`。根目录兼容入口仍支持 `go build -o oss-auto-cert main.go`。
 
 ## 测试命令
 
@@ -59,11 +62,11 @@ import (
     "context"
     "os"
     
-    log "github.com/sirupsen/logrus"
     "github.com/aliyun/aliyun-oss-go-sdk/oss"
+    "github.com/sirupsen/logrus"
     
-    "github.com/nekoimi/oss-auto-cert/internal/config"
     "github.com/nekoimi/oss-auto-cert/internal/certificate"
+    "github.com/nekoimi/oss-auto-cert/internal/config"
 )
 ```
 
@@ -84,15 +87,15 @@ import (
 
 ### 类型和结构体
 
-- 使用 struct tags 进行 YAML/JSON 序列化
+- 文件模型使用对应 TOML / YAML / JSON tags，内部 Config 不承担旧格式解析职责
 - 导出类型需添加文档注释
 - 示例：
 ```go
-// Config 保存应用配置
-type Config struct {
-    Path    string   `yaml:"-"`        // 配置文件路径
-    Webhook string   `yaml:"webhook"`  // 通知 Webhook URL
-    Buckets []Bucket `yaml:"buckets"`  // OSS Bucket 配置
+// Notification 描述通知渠道，URL 不得写入日志。
+type Notification struct {
+    Type   string `toml:"type"`
+    URL    string `toml:"url,omitempty"`
+    URLEnv string `toml:"url-env,omitempty"`
 }
 ```
 
@@ -105,7 +108,7 @@ type Config struct {
 - 示例：
 ```go
 if err != nil {
-    log.WithError(err).Error("加载配置失败")
+    logger.WithError(err).Error("加载配置失败")
     return nil, err
 }
 ```
@@ -118,6 +121,8 @@ if err != nil {
 - 日志写入 stderr；帮助、版本、配置导出和状态正文保留 stdout
 - `--color=auto|always|never` 控制颜色，`--log-level` 控制等级，禁止记录配置全文、私钥或凭证
 - 日志和注释可使用中文（项目约定）
+
+通过构造参数或结构体字段注入 `*logrus.Logger`，避免修改 logrus 全局实例；日志使用说明见 [docs/logging.md](docs/logging.md)。配置解析与业务内部通过返回错误传递失败，在相应边界记录错误，避免每层重复输出。
 
 ### 上下文使用
 
@@ -160,6 +165,7 @@ type Service struct {
   - `provider/acme/`: Let's Encrypt、账户和 HTTP-01 验证
   - `storage/`: 账户、证书、状态、运行锁及旧文件只读导入
   - `notification/`: 内置 JSON 消息及兼容模板
+  - `logging/`: 独立 logrus 实例、TextFormatter、等级和颜色策略
   - `testutil/`: 离线测试证书
 
 CLI 使用 `github.com/spf13/cobra`；通过显式参数记录区分默认值与用户覆盖，旧多字母单横线参数在进入 pflag 前归一化。不引入 Viper。离线测试不调用真实 CA 或云资源；真实集成测试使用 `integration` build tag。
@@ -173,9 +179,14 @@ CLI 使用 `github.com/spf13/cobra`；通过显式参数记录区分默认值与
 - 显式检查错误
 - 示例：
 ```go
-func TestDateIsExpire(t *testing.T) {
-    result := DateIsExpire("2024-10-13", time.Hour*24*30)
-    t.Logf("result: %v", result)
+func TestDomain(t *testing.T) {
+    got, err := Domain("STATIC.EXAMPLE.COM.")
+    if err != nil {
+        t.Fatal(err)
+    }
+    if got != "static.example.com" {
+        t.Fatalf("域名归一化错误: %q", got)
+    }
 }
 ```
 
@@ -183,18 +194,20 @@ func TestDateIsExpire(t *testing.T) {
 
 ```bash
 # 构建镜像
-docker build -t oss-auto-cert:latest .
+docker build -t oss-auto-cert:local .
 
 # 运行容器
 docker run -d --rm \
-  -v $PWD/config.yaml:/etc/oss-auto-cert/config.yaml \
-  -e OSS_ACCESS_KEY_ID=xxx \
-  -e OSS_ACCESS_KEY_SECRET=xxx \
-  oss-auto-cert:latest
+  -v "$PWD/config.toml:/etc/oss-auto-cert/config.toml:ro" \
+  -v "$PWD/certs:/var/lib/oss-auto-cert" \
+  -e OSS_ACCESS_KEY_ID -e OSS_ACCESS_KEY_SECRET \
+  oss-auto-cert:local run --config=/etc/oss-auto-cert/config.toml --color=never
 
 # Docker Compose
-docker-compose up -d
+docker compose up -d
 ```
+
+Compose 使用 `.env.example` 中的 `OSS_AUTO_CERT_IMAGE` 指定固定镜像；默认非 root UID/GID 为 `10001:10001`。配置文件与数据目录需事先创建并授予相应权限，数据目录固定挂载到 `/var/lib/oss-auto-cert`。详细部署流程见 [使用文档](docs/usage.md)。
 
 ## 环境变量
 
@@ -204,6 +217,7 @@ docker-compose up -d
 - `ACME_DATA_DIR`: 证书存储目录
 - `ACME_EXPIRED_EARLY`: 提前续期天数
 - `DEBUG`: 旧 YAML 保留 staging + 强制续期；TOML 忽略并提示。调试日志使用 `--log-level=debug`
+- `NO_COLOR`: 设置后在 `--color=auto` 模式禁用颜色；显式 `--color=always` 可覆盖
 
 ## 安全规范
 
@@ -214,10 +228,12 @@ docker-compose up -d
 
 ## CI/CD
 
-GitHub Actions 工作流位于 `.github/workflows/release-docker.yml`：
-- 版本标签（v*）触发
-- 构建多架构镜像（linux/amd64, linux/arm64）
-- 发布到 Docker Hub、GHCR 和阿里云镜像仓库
+- `.github/workflows/checks.yml`：Linux / Windows 竞态测试、vet、新旧入口构建及漏洞扫描，Go 采用 1.25 系列最新补丁。
+- `.github/workflows/release-binaries.yaml`：标签或手动触发，构建 Linux / Windows / macOS 的 amd64、arm64 二进制。
+- `.github/workflows/release-docker.yml`：标签或手动触发，构建 linux/amd64、linux/arm64 镜像并发布到 Docker Hub、GHCR 和阿里云镜像仓库。
+- `.github/workflows/dev-docker.yaml`：dev 分支开发镜像发布。发布工作流均依赖 checks，不固定检出其他分支。
+
+版本通过 `github.com/nekoimi/oss-auto-cert/internal/cli.Version` 的 `-ldflags -X` 注入；Docker 本地构建可使用 `--build-arg VERSION=local`。
 
 ## 其他说明
 

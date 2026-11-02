@@ -1,16 +1,44 @@
 services:
   oss-auto-cert:
-    image: ghcr.io/nekoimi/oss-auto-cert:latest
-    container_name: oss-auto-cert
-    hostname: oss-auto-cert
+    # 使用验证过的版本标签或 sha256 摘要，避免重启时自动切换 latest。
+    image: ${OSS_AUTO_CERT_IMAGE:?请设置 OSS_AUTO_CERT_IMAGE 为固定版本镜像或摘要}
+    user: "${OSS_AUTO_CERT_UID:-10001}:${OSS_AUTO_CERT_GID:-10001}"
+    init: true
     command:
       - run
       - --config=/etc/oss-auto-cert/config.toml
-    volumes:
-      - ./config.toml:/etc/oss-auto-cert/config.toml:ro
-      - ./certs:/var/lib/oss-auto-cert
-    restart: unless-stopped
+      - --log-level=info
+      - --color=never
     environment:
       OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:?请设置 OSS_ACCESS_KEY_ID}
       OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:?请设置 OSS_ACCESS_KEY_SECRET}
-    stop_grace_period: 45s
+      ACME_DATA_DIR: /var/lib/oss-auto-cert
+    volumes:
+      - type: bind
+        source: ${OSS_AUTO_CERT_CONFIG:-./config.toml}
+        target: /etc/oss-auto-cert/config.toml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${OSS_AUTO_CERT_DATA_DIR:-./certs}
+        target: /var/lib/oss-auto-cert
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    cpus: "1.0"
+    mem_limit: 512m
+    pids_limit: 128
+    restart: unless-stopped
+    stop_grace_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

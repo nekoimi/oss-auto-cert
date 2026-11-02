@@ -1,15 +1,19 @@
 # 阿里云 OSS 证书自动化工具
 
 [![GitHub Release](https://img.shields.io/github/release/nekoimi/oss-auto-cert.svg)](https://github.com/nekoimi/oss-auto-cert/releases)
-[![License](https://img.shields.io/github/license/nekoimi/oss-auto-cert.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-使用 Let's Encrypt 自动签发证书，上传到阿里云 CAS，并分别更新 OSS 与已开启 HTTPS 的 CDN 域名。
+使用 Let's Encrypt 自动申请和续期 SSL 证书，上传到阿里云 CAS，并更新 OSS 与已开启 HTTPS 的 CDN 域名证书。
 
-新版使用 TOML 和 Cobra 命令，保留旧 YAML、原环境变量、单横线启动参数及证书文件的读取。支持单轮执行、只读预演、状态查询和部署失败恢复。本轮暂不支持 ZeroSSL、DNS-01、通配符和 DCDN。
+- 支持多个 Bucket 和域名，可指定管理范围。
+- 提供配置校验、只读预演、单轮执行和常驻巡检。
+- 持久化账户、证书和部署进度，分别恢复 OSS / CDN 的失败任务。
+- 支持企业微信、钉钉、飞书和自定义 Webhook 通知。
+- 支持 Docker Compose 部署，提供日志等级、颜色及本地状态查询。
 
 ## 快速开始
 
-源码构建要求 Go 1.25 或更新版本：
+源码构建要求 Go 1.25 或更新版本，建议使用对应系列最新补丁版本：
 
 ```bash
 go build -o oss-auto-cert ./cmd/oss-auto-cert
@@ -30,7 +34,7 @@ endpoint = "oss-cn-hangzhou.aliyuncs.com"
 domains = ["static.example.com"]
 ```
 
-准备环境变量，校验并查看计划：
+设置凭证，校验配置并查看计划：
 
 ```bash
 export OSS_ACCESS_KEY_ID="your-access-key-id"
@@ -43,37 +47,46 @@ export OSS_ACCESS_KEY_SECRET="your-access-key-secret"
 ./oss-auto-cert run --config=config.toml
 ```
 
-HTTP-01 要求公网能访问 `http://域名/.well-known/acme-challenge/令牌`，并将路径路由到配置 Bucket。首次部署证书需要显式设置 `allow-initial-issuance = true`，程序不会创建新的域名绑定或开启新的 CDN HTTPS。
+HTTP-01 要求公网能访问 `http://域名/.well-known/acme-challenge/令牌`，并将路径路由到配置 Bucket。首次部署证书需要在对应 Bucket 设置 `allow-initial-issuance = true`。数据目录默认为 `/var/lib/oss-auto-cert`，可通过 `ACME_DATA_DIR` 指定可写路径。
 
-## 原用户升级
+## Docker Compose 部署
 
-原命令仍然可用：
+使用 [docker-compose.yaml](docker-compose.yaml) 和 [.env.example](.env.example)：
 
 ```bash
-./oss-auto-cert -config=config.yaml -log-level=info
+cp simple-config.toml config.toml
+cp .env.example .env
 ```
 
-旧 YAML 保持原来的第一个域名范围及最低提前 15 天续期策略；新版 TOML 默认要求列出需要管理的域名。可离线导出配置：
+修改配置中的邮箱、Bucket 和域名，在 `.env` 中填写阿里云凭证，并将 `OSS_AUTO_CERT_IMAGE` 设置为经过验证的固定版本镜像或镜像摘要。Linux 主机使用默认 UID/GID `10001:10001` 时，准备权限：
 
 ```bash
-./oss-auto-cert config migrate -config=config.yaml -output=config.toml
+sudo install -d -m 0700 -o 10001 -g 10001 certs
+sudo chown 10001:10001 config.toml
+sudo chmod 0400 config.toml
+chmod 0600 .env
+
+docker compose config --quiet
+docker compose pull
+docker compose run --rm --no-deps oss-auto-cert config validate --config=/etc/oss-auto-cert/config.toml
+docker compose up -d
+docker compose logs -f oss-auto-cert
+```
+
+部署配置包含非 root 用户、只读根文件系统、只读配置挂载、数据持久化、CPU / 内存 / 进程数限制及日志轮转。数据卷固定使用 `/var/lib/oss-auto-cert`，停止宽限为 60 秒。已有数据目录的权限调整和备份方式见 [部署说明](docs/usage.md#8-docker权限与-systemd)。
+
+从源码构建镜像时，可以执行 `docker build --build-arg VERSION=local -t oss-auto-cert:local .`，并设置 `OSS_AUTO_CERT_IMAGE=oss-auto-cert:local`；使用本地镜像时跳过 `docker compose pull`。
+
+## 配置迁移
+
+已有 YAML 配置可以继续运行，也可导出为 TOML：
+
+```bash
+./oss-auto-cert config migrate --config=config.yaml --output=config.toml
 ./oss-auto-cert config validate --config=config.toml
 ```
 
-迁移不会改写原文件或固化环境覆盖值。新旧文件并存时请显式传入 `--config`。升级前备份原二进制、配置及整个证书数据目录，回退需恢复整组备份。旧 Go 包 API 已被内部模块替代，源码导入方需要调整。
-
-## Docker
-
-```bash
-docker build -t oss-auto-cert:local .
-docker run --rm \
-  -v "$PWD/config.toml:/etc/oss-auto-cert/config.toml:ro" \
-  -v "$PWD/certs:/var/lib/oss-auto-cert" \
-  -e OSS_ACCESS_KEY_ID -e OSS_ACCESS_KEY_SECRET \
-  oss-auto-cert:local run --config=/etc/oss-auto-cert/config.toml
-```
-
-仓库附带 [Compose 示例](docker-compose.yaml)。数据目录必须持久化，并与 `storage.data-dir` / `ACME_DATA_DIR` 一致。非 root 运行前需要为挂载的数据目录设置对应属主，见使用文档。
+迁移保留配置中的域名选择与续期策略，不改写原文件、不固化环境覆盖值。新旧文件并存时请使用 `--config` 指定路径。升级前备份二进制、配置和完整数据目录，操作步骤见 [升级与回退说明](docs/usage.md#7-旧版升级与回退)。
 
 ## 命令
 
@@ -81,16 +94,26 @@ docker run --rm \
 | --- | --- |
 | `config init` | 生成最小配置，不覆盖已有文件 |
 | `config validate` | 离线检查字段和通知模板 |
-| `config migrate` | 将旧 YAML 导出为 TOML |
-| `check` / `run --dry-run` | 只读检查和计划，不申请或部署证书 |
+| `config migrate` | 将 YAML 配置导出为 TOML |
+| `check` / `run --dry-run` | 只读检查资源并展示计划 |
 | `run --once` | 执行一轮后退出 |
 | `run` | 常驻巡检并恢复待重试部署 |
 | `status` | 查看带检查时间的本地快照 |
-| `version` / `--help` | 离线查看版本和帮助 |
+| `version` / `--help` | 查看版本和帮助 |
 
-运行日志使用 logrus `TextFormatter`，包含时间、级别和域名上下文，写入 stderr。终端默认彩色输出；`--color=always` 强制开启、`--color=never` 关闭，`--log-level=debug` 查看详细过程。配置导出等命令的 stdout 不混入日志。
+## 日志
 
-默认离线测试不需要凭证，也不会改动真实云资源：
+日志使用 logrus `TextFormatter`，包含时间、级别和域名上下文，写入 stderr。终端自动彩色输出；`--color=always` 强制开启、`--color=never` 关闭。配置导出等命令正文保留在 stdout。
+
+```bash
+./oss-auto-cert run --config=config.toml --log-level=debug --color=always
+```
+
+保存日志、容器颜色和配置导出重定向示例见 [日志说明](docs/logging.md)。
+
+## 开发
+
+默认测试无需凭证，使用模拟服务，不修改真实云资源：
 
 ```bash
 go test ./...
@@ -100,11 +123,15 @@ go vet ./...
 
 ## 文档
 
-- [完整使用、升级及故障恢复说明](docs/usage.md)
+- [完整使用、部署及故障恢复说明](docs/usage.md)
+- [日志等级、颜色与日志保存](docs/logging.md)
 - [完整 TOML 示例](examples/config.full.toml)
-- [旧 YAML 示例](simple-config.yaml)
-- [重构设计与实现状态](docs/refactoring-plan.md)
-- [首版重构验证记录](docs/refactoring-validation.md)
+- [YAML 配置示例](simple-config.yaml)
 - [开发规范](AGENTS.md)
+- [变更记录](CHANGELOG.md)
 
-许可证见 [LICENSE](LICENSE)。基础依赖：[lego](https://github.com/go-acme/lego)、[Cobra](https://github.com/spf13/cobra)、阿里云 SDK。
+## 许可证
+
+本项目采用 [MIT License](LICENSE)。
+
+基础依赖：[lego](https://github.com/go-acme/lego)、[Cobra](https://github.com/spf13/cobra)、[logrus](https://github.com/sirupsen/logrus)、阿里云 SDK。
