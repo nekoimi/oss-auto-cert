@@ -1,5 +1,4 @@
-// Package cli 实现 Cobra 命令与旧参数兼容。
-package cli
+package main
 
 import (
 	"context"
@@ -239,7 +238,7 @@ func exclusiveWrite(path string, raw []byte) error {
 	return f.Close()
 }
 
-// Execute 为两个程序入口提供相同退出码和输出行为。
+// Execute 执行命令并统一退出码和输出行为。
 func Execute(ctx context.Context, args []string, out, errOut io.Writer) int {
 	logger := logging.New(errOut)
 	normalized, err := Normalize(args)
@@ -261,7 +260,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer) int {
 	return 2
 }
 
-// Main 处理信号，供新旧入口委托调用。
+// Main 处理进程信号并执行命令。
 func Main() int {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()

@@ -25,7 +25,7 @@ go mod tidy && go mod download
 ./oss-auto-cert run --config=/path/to/config.toml --log-level=info
 ```
 
-上述环境变量内联写法适用于 Bash；PowerShell 可先执行 `$env:CGO_ENABLED = "0"`。根目录兼容入口仍支持 `go build -o oss-auto-cert main.go`。
+上述环境变量内联写法适用于 Bash；PowerShell 可先执行 `$env:CGO_ENABLED = "0"`。
 
 ## 测试命令
 
@@ -155,9 +155,11 @@ type Service struct {
 
 ### 包组织结构
 
-- `cmd/oss-auto-cert/main.go`: 推荐入口；根目录 `main.go` 保留旧构建方式
+- `cmd/oss-auto-cert/`: 程序入口与 CLI，使用同一个 `main` 包
+  - `main.go`: 进程入口和退出码
+  - `root.go`: Cobra 命令、旧参数适配、信号处理和输出；不使用全局 init 加载配置
+  - `root_test.go`: CLI 离线测试
 - `internal/`: 内部实现
-  - `cli/`: Cobra 命令、旧参数适配和输出；不使用全局 init 加载配置
   - `app/`: 用例组装、生命周期及退出码
   - `config/`: TOML、旧 YAML 适配、覆盖和迁移；核心只消费统一 Config
   - `certificate/`: 证书计划、签发及逐目标部署恢复；不依赖具体 SDK 或 Cobra
@@ -228,12 +230,12 @@ Compose 使用 `.env.example` 中的 `OSS_AUTO_CERT_IMAGE` 指定固定镜像；
 
 ## CI/CD
 
-- `.github/workflows/checks.yml`：Linux / Windows 竞态测试、vet、新旧入口构建及漏洞扫描，Go 采用 1.25 系列最新补丁。
+- `.github/workflows/checks.yml`：Linux / Windows 竞态测试、vet、命令入口构建及漏洞扫描，Go 采用 1.25 系列最新补丁。
 - `.github/workflows/release-binaries.yaml`：标签或手动触发，构建 Linux / Windows / macOS 的 amd64、arm64 二进制。
 - `.github/workflows/release-docker.yml`：标签或手动触发，构建 linux/amd64、linux/arm64 镜像并发布到 Docker Hub、GHCR 和阿里云镜像仓库。
 - `.github/workflows/dev-docker.yaml`：dev 分支开发镜像发布。发布工作流均依赖 checks，不固定检出其他分支。
 
-版本通过 `github.com/nekoimi/oss-auto-cert/internal/cli.Version` 的 `-ldflags -X` 注入；Docker 本地构建可使用 `--build-arg VERSION=local`。
+版本通过 `-ldflags "-X main.Version=版本号"` 注入；Docker 本地构建可使用 `--build-arg VERSION=local`。
 
 ## 其他说明
 

@@ -10,7 +10,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags "-s -w -X github.com/nekoimi/oss-auto-cert/internal/cli.Version=$VERSION" -o oss-auto-cert ./cmd/oss-auto-cert
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags "-s -w -X main.Version=$VERSION" -o oss-auto-cert ./cmd/oss-auto-cert
 
 FROM alpine:latest
 

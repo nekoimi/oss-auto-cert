@@ -8,7 +8,7 @@ go build -o oss-auto-cert ./cmd/oss-auto-cert
 ./oss-auto-cert config validate --config=config.toml
 ```
 
-根目录兼容入口仍支持 `go build -o oss-auto-cert main.go` 和 `go build .`。配置工具和帮助不需要阿里云凭证；运行、检查和预演需要通过环境变量提供凭证。
+配置工具和帮助不需要阿里云凭证；运行、检查和预演需要通过环境变量提供凭证。
 
 Linux / macOS：
 

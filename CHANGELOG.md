@@ -21,7 +21,7 @@
 - 配置格式由文件扩展名区分，TOML 不再包含 `version` 字段，生成和迁移配置同步简化。
 - 开源协议由 Apache-2.0 改为 MIT，容器内包含许可证并设置 OCI 许可证标签。
 - 生产 Compose 使用固定镜像、非 root 用户、只读根文件系统、资源限制和日志轮转，提供环境变量模板。
-- 推荐入口改为 `./cmd/oss-auto-cert`，保留根目录构建、旧启动参数和原环境变量兼容。
+- 程序入口、Cobra 命令及 CLI 测试统一放入 `cmd/oss-auto-cert`，使用 `go build ./cmd/oss-auto-cert` 构建，保留旧启动参数和原环境变量兼容。
 - 日志库由 charmbracelet/log 改为 `github.com/sirupsen/logrus`；应用日志写入 stderr，配置导出等命令正文保留 stdout。
 - 重组内部包，移除旧 `pkg/utils`、`pkg/webhook` 等 Go 导入 API；源码调用方需要适配。
 - Docker 按目标架构编译，统一配置和数据挂载路径；标签发布构建触发提交，并注入版本信息。

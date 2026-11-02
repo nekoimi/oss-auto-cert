@@ -246,13 +246,13 @@ events = ["updated", "failed", "recovered"]
 
 ## 6. 代码结构与依赖
 
-以下为首版实现布局，省略测试文件。CLI 命令集中在 root.go，配置文件模型和适配集中在 load.go，周期与重试调度由 app.go 负责；HTTP-01 实现位于 provider/acme。后续可按职责继续拆分，目录变化不能破坏已约定的配置、运行参数、模块路径及兼容构建入口。
+以下为实现布局，省略测试文件。CLI 命令集中在 cmd/oss-auto-cert/root.go，配置文件模型和适配集中在 load.go，周期与重试调度由 app.go 负责；HTTP-01 实现位于 provider/acme。后续可按职责继续拆分，目录变化不能破坏已约定的配置、运行参数和模块路径。
 
 ```text
-main.go                         兼容旧构建命令的薄入口
-cmd/oss-auto-cert/main.go       推荐构建入口、进程退出码
+cmd/oss-auto-cert/
+  main.go                       程序入口、进程退出码
+  root.go                       Cobra 命令、全局参数及旧参数适配
 internal/
-  cli/root.go                   Cobra 命令、全局参数及旧参数适配
   app/app.go                    依赖组装、巡检调度、生命周期与退出码
   config/
     config.go                   统一配置、默认值、校验及归一化
@@ -277,7 +277,7 @@ docs/
   logging.md                    日志等级、颜色与日志保存
 ```
 
-`cmd/oss-auto-cert/main.go` 与根目录 `main.go` 均只委托同一个 CLI 执行入口，处理最终退出码，不复制命令注册或业务实现。推荐使用 `go build -o oss-auto-cert ./cmd/oss-auto-cert`，同时保留 `go build -o oss-auto-cert main.go` 和 `go build .`。
+`cmd/oss-auto-cert/main.go` 委托同目录的 CLI 执行入口并处理最终退出码，命令实现和测试均使用 `main` 包，业务实现保留在 `internal`。使用 `go build -o oss-auto-cert ./cmd/oss-auto-cert` 构建整个命令包。
 
 依赖方向为 CLI 调用应用层用例，应用层组装配置、业务服务和适配器，业务层通过小接口调用签发、发现、上传、部署、存储和通知。`certificate` 不依赖 Cobra、具体 SDK 或存储实现。接口放在使用它的包内，避免扩张一个承担所有职责的 `types` 包。SDK 响应在适配层转换为业务模型，不穿透到调度和计划层。
 
@@ -451,8 +451,8 @@ Cobra / pflag 不原生兼容旧标准 flag 包的多字母单横线参数，必
 
 ## 11. 部署和发布
 
-- 推荐构建入口改为 `go build -o oss-auto-cert ./cmd/oss-auto-cert`，Docker、发布工作流和新文档统一采用该入口；通过根目录薄入口保留 `go build -o oss-auto-cert main.go` 和 `go build .`，保持现有模块路径。
-- 新目录布局、Cobra 使用约定和两种构建入口同步写入 AGENTS.md，统一 Go 最低版本与开发文档。
+- 构建入口为 `go build -o oss-auto-cert ./cmd/oss-auto-cert`，Docker、发布工作流和文档统一采用该入口，保持现有模块路径；版本通过 `-ldflags "-X main.Version=版本号"` 注入。
+- 目录布局、Cobra 使用约定和构建入口同步写入 AGENTS.md，统一 Go 最低版本与开发文档。
 - 新镜像通过 `TARGETOS` / `TARGETARCH` 构建，测试 amd64 和 arm64，标签发布检出触发提交。
 - 显式安装并验证容器内信任根，保持 ACME 和云 API 的 TLS 校验。
 - 保留旧配置挂载路径；新版示例显式传入 TOML 路径，避免双配置发现歧义。
@@ -515,7 +515,6 @@ go test ./...
 go vet ./...
 go build ./...
 go build -o oss-auto-cert ./cmd/oss-auto-cert
-go build -o oss-auto-cert main.go
 govulncheck ./...
 ```
 

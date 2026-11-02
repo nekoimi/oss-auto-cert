@@ -11,6 +11,19 @@
 - 支持企业微信、钉钉、飞书和自定义 Webhook 通知。
 - 支持 Docker Compose 部署，提供日志等级、颜色及本地状态查询。
 
+## 工作流程
+
+每轮巡检先读取已绑定域名的证书和本地部署进度，再判断是否需要续期或恢复部署。常驻模式默认启动时执行一轮，之后每 6 小时巡检，并按部署重试时间提前唤醒。
+
+![OSS / CDN 证书自动管理流程](docs/images/oss-auto-cert.svg)
+
+- `check` / `run --dry-run` 只读取资源并输出计划，不申请证书、不更新云资源、不写入本地状态。
+- 首次签发需开启 `allow-initial-issuance`；签发时通过 OSS 中的 HTTP-01 验证文件完成域名验证，成功后清理验证文件。
+- 部署未完成时优先复用已保存的有效证书；OSS 与 CDN 分别记录和核验进度，已成功的目标不会因另一个目标失败而重复更新。
+- 域名处理失败时记录错误，其他域名继续执行；已配置的通知渠道接收更新、失败和恢复事件。CAS 上传结果不明确时先核对上传记录，无法确认则暂停该域名部署并提示人工核对。
+
+流程图源码：[oss-auto-cert.puml](oss-auto-cert.puml)。
+
 ## 快速开始
 
 源码构建要求 Go 1.25 或更新版本，建议使用对应系列最新补丁版本：
@@ -117,6 +130,12 @@ docker compose logs -f oss-auto-cert
 go test ./...
 go test -race ./...
 go vet ./...
+```
+
+修改 PlantUML 流程图后，重新生成 README 中的图片：
+
+```bash
+java -jar /path/to/plantuml.jar -charset UTF-8 -tsvg -o docs/images oss-auto-cert.puml
 ```
 
 ## 文档

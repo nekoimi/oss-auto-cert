@@ -1,9 +1,5 @@
 package main
 
-import (
-	"os"
+import "os"
 
-	"github.com/nekoimi/oss-auto-cert/internal/cli"
-)
-
-func main() { os.Exit(cli.Main()) }
+func main() { os.Exit(Main()) }

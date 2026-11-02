@@ -48,21 +48,21 @@ jobs:
           linux_arch=('amd64' 'arm64')
           for arch in "${linux_arch[@]}"; do
             export GOARCH="$arch" 
-            GOOS=linux go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-linux-${arch} -ldflags="-s -w -X github.com/nekoimi/oss-auto-cert/internal/cli.Version=${VERSION}" -trimpath ./cmd/oss-auto-cert
+            GOOS=linux go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-linux-${arch} -ldflags="-s -w -X main.Version=${VERSION}" -trimpath ./cmd/oss-auto-cert
           done
           
           windows_arch=('amd64' 'arm64')
           for arch in "${windows_arch[@]}"; do
             export GOOS="windows"
             export GOARCH="$arch"
-            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-windows-${arch}.exe -ldflags="-s -w -X github.com/nekoimi/oss-auto-cert/internal/cli.Version=${VERSION}" -trimpath ./cmd/oss-auto-cert
+            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-windows-${arch}.exe -ldflags="-s -w -X main.Version=${VERSION}" -trimpath ./cmd/oss-auto-cert
           done
           
           darwin_arch=('amd64' 'arm64')
           for arch in "${darwin_arch[@]}"; do
             export GOOS="darwin"
             export GOARCH=$arch
-            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-darwin-${arch} -ldflags="-s -w -X github.com/nekoimi/oss-auto-cert/internal/cli.Version=${VERSION}" -trimpath ./cmd/oss-auto-cert
+            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-darwin-${arch} -ldflags="-s -w -X main.Version=${VERSION}" -trimpath ./cmd/oss-auto-cert
           done
           
           ls -l binaries
