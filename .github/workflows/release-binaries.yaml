@@ -7,7 +7,10 @@ on:
       - "v*"
 
 jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
   build_binaries:
+    needs: checks
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -18,7 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: 'master'
           fetch-depth: 0
 
       - name: Set Env
@@ -34,7 +36,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version: "1.25.x"
+          check-latest: true
 
       - name: Build Binaries
         id: build
@@ -45,21 +48,21 @@ jobs:
           linux_arch=('amd64' 'arm64')
           for arch in "${linux_arch[@]}"; do
             export GOARCH="$arch" 
-            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-linux-${arch} -ldflags="-extldflags -static -s -w" -trimpath
+            GOOS=linux go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-linux-${arch} -ldflags="-s -w -X github.com/nekoimi/oss-auto-cert/internal/cli.Version=${VERSION}" -trimpath ./cmd/oss-auto-cert
           done
           
           windows_arch=('amd64' 'arm64')
           for arch in "${windows_arch[@]}"; do
             export GOOS="windows"
             export GOARCH="$arch"
-            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-windows-${arch}.exe -ldflags="-extldflags -static -s -w" -trimpath
+            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-windows-${arch}.exe -ldflags="-s -w -X github.com/nekoimi/oss-auto-cert/internal/cli.Version=${VERSION}" -trimpath ./cmd/oss-auto-cert
           done
           
           darwin_arch=('amd64' 'arm64')
           for arch in "${darwin_arch[@]}"; do
             export GOOS="darwin"
             export GOARCH=$arch
-            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-darwin-${arch} -ldflags="-extldflags -static -s -w" -trimpath
+            go build -o binaries/${{ env.OUTPUT_NAME }}-${VERSION}-darwin-${arch} -ldflags="-s -w -X github.com/nekoimi/oss-auto-cert/internal/cli.Version=${VERSION}" -trimpath ./cmd/oss-auto-cert
           done
           
           ls -l binaries

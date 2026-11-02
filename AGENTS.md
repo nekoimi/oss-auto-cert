@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-- **语言**: Go 1.23.0
+- **语言**: Go 1.25.0（发布使用最新补丁版本）
 - **模块**: `github.com/nekoimi/oss-auto-cert`
 - **用途**: 基于 Let's Encrypt 实现阿里云 OSS/CDN SSL 证书自动管理
 
@@ -12,16 +12,16 @@
 
 ```bash
 # 构建项目
-go build -o oss-auto-cert main.go
+go build -o oss-auto-cert ./cmd/oss-auto-cert
 
 # 生产环境构建（静态链接）
-go build --ldflags "-extldflags -static -s -w" -o oss-auto-cert main.go
+go build --ldflags "-extldflags -static -s -w" -o oss-auto-cert ./cmd/oss-auto-cert
 
 # 安装依赖
 go mod tidy && go mod download
 
 # 运行应用
-./oss-auto-cert -config=/path/to/config.yaml -log-level=info
+./oss-auto-cert run --config=/path/to/config.toml --log-level=info
 ```
 
 ## 测试命令
@@ -34,12 +34,12 @@ go test ./...
 go test -v ./...
 
 # 运行特定包的测试
-go test -v ./pkg/utils/
-go test -v ./internal/alioss/
+go test -v ./internal/config/
+go test -v ./internal/certificate/
 
 # 运行单个测试函数
-go test -v -run TestDateIsExpire ./pkg/utils/
-go test -v -run TestBackupIfExists ./pkg/utils/
+go test -v -run TestLegacyMigrationAndEnvironment ./internal/config/
+go test -v -run TestRestartRetriesOnlyFailedTarget ./internal/certificate/
 
 # 测试覆盖率
 go test -cover ./...
@@ -59,11 +59,11 @@ import (
     "context"
     "os"
     
-    "github.com/charmbracelet/log"
+    log "github.com/sirupsen/logrus"
     "github.com/aliyun/aliyun-oss-go-sdk/oss"
     
     "github.com/nekoimi/oss-auto-cert/internal/config"
-    "github.com/nekoimi/oss-auto-cert/pkg/utils"
+    "github.com/nekoimi/oss-auto-cert/internal/certificate"
 )
 ```
 
@@ -100,21 +100,23 @@ type Config struct {
 
 - 返回错误而不是记录后继续执行
 - 使用 `fmt.Errorf()` 添加上下文
-- 使用 charmbracelet/log 记录错误
+- 使用 logrus 记录错误
 - 显式处理错误，避免使用 `_` 忽略
 - 示例：
 ```go
 if err != nil {
-    log.Errorf("加载配置失败: %s", err.Error())
+    log.WithError(err).Error("加载配置失败")
     return nil, err
 }
 ```
 
 ### 日志规范
 
-- 使用 `github.com/charmbracelet/log` 记录日志
-- 日志级别: Debug, Info, Warn, Error, Fatal
-- 使用结构化日志: `log.Debugf()`, `log.Infof()`
+- 使用 `github.com/sirupsen/logrus` 记录日志，通过 `internal/logging` 创建独立实例
+- 日志级别: Trace, Debug, Info, Warn, Error；通过返回错误退出，避免调用 Fatal / Panic
+- 使用 `TextFormatter`，完整时间戳，按级别着色；通过 `WithFields` / `WithError` 记录 Bucket、域名、阶段和错误
+- 日志写入 stderr；帮助、版本、配置导出和状态正文保留 stdout
+- `--color=auto|always|never` 控制颜色，`--log-level` 控制等级，禁止记录配置全文、私钥或凭证
 - 日志和注释可使用中文（项目约定）
 
 ### 上下文使用
@@ -148,16 +150,19 @@ type Service struct {
 
 ### 包组织结构
 
-- `main.go`: 入口点
+- `cmd/oss-auto-cert/main.go`: 推荐入口；根目录 `main.go` 保留旧构建方式
 - `internal/`: 内部实现
-  - `config/`: 配置管理
-  - `cert/`: 证书自动化逻辑
-  - `alioss/`: 阿里云 OSS/CDN/CAS 服务
-  - `acme/`: ACME/Let's Encrypt 集成
-  - `types/`: 共享类型定义
-- `pkg/`: 公共包
-  - `utils/`: 工具函数
-  - `webhook/`: Webhook 通知
+  - `cli/`: Cobra 命令、旧参数适配和输出；不使用全局 init 加载配置
+  - `app/`: 用例组装、生命周期及退出码
+  - `config/`: TOML v2、旧 YAML 适配、覆盖和迁移；核心只消费统一 Config
+  - `certificate/`: 证书计划、签发及逐目标部署恢复；不依赖具体 SDK 或 Cobra
+  - `provider/aliyun/`: OSS/CDN/CAS 适配
+  - `provider/acme/`: Let's Encrypt、账户和 HTTP-01 验证
+  - `storage/`: 账户、证书、状态、运行锁及旧文件只读导入
+  - `notification/`: 内置 JSON 消息及兼容模板
+  - `testutil/`: 离线测试证书
+
+CLI 使用 `github.com/spf13/cobra`；通过显式参数记录区分默认值与用户覆盖，旧多字母单横线参数在进入 pflag 前归一化。不引入 Viper。离线测试不调用真实 CA 或云资源；真实集成测试使用 `integration` build tag。
 
 ## 测试规范
 
@@ -198,7 +203,7 @@ docker-compose up -d
 - `ACME_EMAIL`: 证书注册邮箱
 - `ACME_DATA_DIR`: 证书存储目录
 - `ACME_EXPIRED_EARLY`: 提前续期天数
-- `DEBUG`: 调试模式，设为 "true" 开启
+- `DEBUG`: 旧 YAML 保留 staging + 强制续期；TOML 忽略并提示。调试日志使用 `--log-level=debug`
 
 ## 安全规范
 

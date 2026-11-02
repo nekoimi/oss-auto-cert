@@ -25,3 +25,13 @@ go.work.sum
 .idea
 
 dev.yaml
+
+# 本地运行配置和私钥数据
+/config.toml
+/config.yaml
+/config.yml
+/certs/
+/.env
+/oss-auto-cert
+/oss-auto-cert-test*
+/oss-auto-cert-legacy*

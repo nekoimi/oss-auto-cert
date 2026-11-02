@@ -1,0 +1,49 @@
+version = 2
+
+[storage]
+data-dir = "/var/lib/oss-auto-cert"
+
+[schedule]
+interval = "6h"
+run-on-start = true
+
+[renewal]
+before-days = 30
+
+[acme]
+provider = "letsencrypt"
+email = "admin@example.com"
+environment = "production"
+key-type = "rsa2048"
+timeout = "2m"
+
+[runtime]
+workers = 2
+request-timeout = "30s"
+shutdown-timeout = "30s"
+
+[[buckets]]
+name = "my-bucket"
+endpoint = "oss-cn-hangzhou.aliyuncs.com"
+domain-mode = "listed" # listed / all / first；all 会管理所有已绑定域名
+domains = ["static.example.com", "images.example.com"]
+allow-initial-issuance = false
+
+[buckets.challenge]
+type = "oss-http-01"
+
+[buckets.deploy]
+oss = true
+cdn = "auto" # auto 仅更新已开启 HTTPS 的 CDN；off 完全禁用 CDN 查询及写入
+
+# 不使用通知时删除整个 notifications 表。
+[[notifications]]
+type = "wecom"
+url-env = "CERT_WEBHOOK_URL"
+events = ["updated", "failed", "recovered"]
+
+# 自定义格式：用 json 函数产生完整 JSON 字符串，不要在表达式外围加引号。
+# [[notifications]]
+# type = "template"
+# url-env = "CUSTOM_WEBHOOK_URL"
+# template = '''{"text": {{ json .Message }}}'''

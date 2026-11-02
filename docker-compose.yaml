@@ -1,19 +1,16 @@
-version: "3.8"
 services:
   oss-auto-cert:
-    image: ghcr.io/nekoimi/oss-auto-cert:alpine
+    image: ghcr.io/nekoimi/oss-auto-cert:latest
     container_name: oss-auto-cert
     hostname: oss-auto-cert
-    network_mode: host
     command:
-      - -log-level=warn
+      - run
+      - --config=/etc/oss-auto-cert/config.toml
     volumes:
-      - $PWD/config.yaml:/etc/oss-auto-cert/config.yaml
-      - $PWD/certs:/var/lib/oss-auto-cert
+      - ./config.toml:/etc/oss-auto-cert/config.toml:ro
+      - ./certs:/var/lib/oss-auto-cert
     restart: unless-stopped
     environment:
-      OSS_ACCESS_KEY_ID: xxx
-      OSS_ACCESS_KEY_SECRET: xxx
-      ACME_EMAIL: xxxxx@xxxxxx.com
-      ACME_DATA_DIR: /data
-      ACME_EXPIRED_EARLY: 15
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:?请设置 OSS_ACCESS_KEY_ID}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:?请设置 OSS_ACCESS_KEY_SECRET}
+    stop_grace_period: 45s

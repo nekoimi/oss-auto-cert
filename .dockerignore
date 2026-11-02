@@ -1,0 +1,10 @@
+.git
+.idea
+certs
+config.toml
+config.yaml
+config.yml
+dev.yaml
+*.exe
+*.out
+.env

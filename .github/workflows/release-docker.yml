@@ -7,7 +7,10 @@ on:
       - "v*"
 
 jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
   build_and_push:
+    needs: checks
     name: Build and push container image to registries
     runs-on: ubuntu-latest
     permissions:
@@ -18,8 +21,6 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v7
-        with:
-          ref: 'master'
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -68,5 +69,6 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
+          build-args: VERSION=${{ github.ref_name }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
