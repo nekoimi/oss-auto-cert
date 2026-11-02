@@ -27,7 +27,7 @@ $env:ACME_DATA_DIR = Join-Path $PWD "certs"
 .\oss-auto-cert.exe config init --output=config.toml
 ```
 
-PowerShell 使用 `.\oss-auto-cert.exe` 调用后续命令；上述数据目录覆盖可避免 Windows 使用默认的 Unix 路径。程序不自动读取 `.env`。最低 Go 版本为 1.25，正式发布应使用对应系列最新补丁版本构建。
+PowerShell 使用 `.\oss-auto-cert.exe` 调用后续命令；上述数据目录覆盖可避免 Windows 使用默认的 Unix 路径。程序不自动读取 `.env`。最低 Go 版本为 1.25；测试、漏洞扫描和正式发布统一使用 Go 1.26 系列最新补丁，以包含标准库安全修复。
 
 先运行 `run --dry-run` 查看范围和计划，再执行 `run --once`；常驻使用 `run` 或不带子命令的原启动方式。预演不会创建账户、验证文件、运行锁、证书和状态，也不能证明写权限及完整 HTTP-01 验证可用。
 
@@ -190,7 +190,13 @@ CAS 上传响应丢失时，先按稳定名称查询已上传记录，并核对�
 
 ## 8. Docker、权限与 Systemd
 
+README 中的快速开始使用 `compose.yaml` 和 Docker 命名数据卷，Docker 自动管理数据目录，无需手动设置宿主机目录属主。它使用镜像默认用户运行；下方的生产配置使用专用非 root 用户和宿主机绑定目录，因此需要额外准备目录权限。两种配置的存储位置不同，切换时需停服并迁移完整数据，不要直接启动一份空数据目录。
+
+镜像地址为 `nekoimi/oss-auto-cert:<版本号>`，也可使用 `ghcr.io/nekoimi/oss-auto-cert:<版本号>` 或 `registry.cn-hangzhou.aliyuncs.com/nekoimi/oss-auto-cert:<版本号>`。镜像标签不包含发行版号开头的 `v`，选择与配置格式匹配的发行版。
+
 生产 Compose 配置见 [docker-compose.yaml](../docker-compose.yaml)，变量模板见 [.env.example](../.env.example)。使用 Docker Compose v2 或更新版本。程序仅向外访问 CA、OSS / CAS / CDN 和通知接口，无需发布容器端口。
+
+从快速开始切换到此配置时，使用 `docker compose -f docker-compose.yaml ...` 显式指定文件，或先移走原 `compose.yaml`，避免 Compose 优先读取快速开始配置。
 
 1. 将 `simple-config.toml` 复制为 `config.toml`，填写邮箱、Bucket 和域名。
 2. 将 `.env.example` 复制为 `.env`，填写 `OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET` 和 `OSS_AUTO_CERT_IMAGE`。镜像使用经过验证的固定版本标签或完整 `@sha256:` 摘要，不使用滚动标签。
@@ -263,6 +269,14 @@ RAM 权限按实际操作授予：读取 Bucket CNAME、上传 / 删除本程序
 
 ## 9. 开发检查
 
+源码最低支持 Go 1.25；开发检查和发布构建使用 Go 1.26 系列最新补丁：
+
+```bash
+go build -o oss-auto-cert ./cmd/oss-auto-cert
+```
+
+默认测试不需要阿里云凭证：
+
 ```bash
 go test ./...
 go test -race ./...
@@ -271,7 +285,7 @@ go build ./...
 go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 ```
 
-漏洞工具可能自动下载更新的 Go 工具链。默认测试使用模拟云服务、本地 HTTP 服务器和自签测试证书。真实云资源集成测试必须显式启用 `integration` build tag 并使用专用测试 Bucket，发布前仍需在真实测试环境核验云 API、HTTP-01 和边缘生效情况。
+`govulncheck v1.9.0` 要求 Go 1.26 或更新版本。CI 显式安装 Go 1.26 系列最新补丁并设置 `GOTOOLCHAIN=local`，扫描与构建使用相同工具链；升级扫描工具前需核对其 Go 最低版本要求。默认测试使用模拟云服务、本地 HTTP 服务器和自签测试证书。真实云资源集成测试必须显式启用 `integration` build tag 并使用专用测试 Bucket，发布前仍需在真实测试环境核验云 API、HTTP-01 和边缘生效情况。
 
 仅编译带标签的集成测试，不访问云端：
 
@@ -280,3 +294,9 @@ go test -tags=integration ./internal/provider/aliyun -run '^$'
 ```
 
 实际运行 `TestIntegrationDiscover` 时，需要显式提供 `TEST_NAME`、`TEST_ENDPOINT` 和阿里云凭证；该测试只读取 Bucket 域名，不覆盖签发或部署验收。已完成的本地验证见 [验证记录](refactoring-validation.md)，功能变更见 [Changelog](../CHANGELOG.md)。
+
+README 流程图源码位于 [oss-auto-cert.puml](../oss-auto-cert.puml)，修改后使用 PlantUML 生成 SVG，并同步提交图片：
+
+```bash
+java -jar /path/to/plantuml.jar -charset UTF-8 -tsvg -o docs/images oss-auto-cert.puml
+```

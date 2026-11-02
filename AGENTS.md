@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-- **语言**: Go 1.25.0（发布使用最新补丁版本）
+- **语言**: Go 1.25.0（最低版本；测试、扫描和发布使用 Go 1.26 系列最新补丁）
 - **模块**: `github.com/nekoimi/oss-auto-cert`
 - **用途**: 基于 Let's Encrypt 实现阿里云 OSS/CDN SSL 证书自动管理
 - **许可证**: MIT，见 [LICENSE](LICENSE)
@@ -230,7 +230,8 @@ Compose 使用 `.env.example` 中的 `OSS_AUTO_CERT_IMAGE` 指定固定镜像；
 
 ## CI/CD
 
-- `.github/workflows/checks.yml`：Linux / Windows 竞态测试、vet、命令入口构建及漏洞扫描，Go 采用 1.25 系列最新补丁。
+- `.github/workflows/checks.yml`：Linux / Windows 竞态测试、vet、命令入口构建及漏洞扫描，Go 采用 1.26 系列最新补丁，与二进制和 Docker 发布构建保持一致。
+- 漏洞扫描使用要求 Go 1.26 的 `govulncheck v1.9.0`，扫描任务设置 `GOTOOLCHAIN=local`；升级工具时先核对其最低 Go 版本。
 - `.github/workflows/release-binaries.yaml`：标签或手动触发，构建 Linux / Windows / macOS 的 amd64、arm64 二进制。
 - `.github/workflows/release-docker.yml`：标签或手动触发，构建 linux/amd64、linux/arm64 镜像并发布到 Docker Hub、GHCR 和阿里云镜像仓库。
 - `.github/workflows/dev-docker.yaml`：dev 分支开发镜像发布。发布工作流均依赖 checks，不固定检出其他分支。

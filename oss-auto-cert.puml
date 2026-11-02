@@ -1,55 +1,30 @@
 @startuml
-title OSS / CDN 证书自动管理流程
+!pragma layout smetana
+left to right direction
 
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Microsoft YaHei"
-skinparam defaultFontSize 14
+skinparam defaultFontSize 16
 skinparam shadowing false
-skinparam ArrowColor #475569
-skinparam activity {
-  BackgroundColor #EFF6FF
-  BorderColor #3B82F6
+skinparam roundcorner 16
+skinparam ArrowColor #94A3B8
+skinparam ArrowThickness 2
+skinparam rectangle {
+  BorderColor #CBD5E1
   FontColor #0F172A
-  DiamondBackgroundColor #FEF3C7
-  DiamondBorderColor #D97706
-  StartColor #2563EB
-  EndColor #2563EB
+  BackgroundColor #F8FAFC
 }
+skinparam padding 12
+skinparam ranksep 24
 
-start
-:加载并校验 TOML / 旧 YAML 配置\n应用环境变量与命令行覆盖;
-:触发一轮巡检\n启动、定时、部署重试或单次执行;
-:读取 Bucket 已绑定域名\n按配置选择管理范围、排除冲突;
+rectangle "<b>01  检查</b>\n域名与证书有效期" as inspect #F1F5F9
+rectangle "<b>02  准备</b>\n申请或复用证书" as prepare #EFF6FF
+rectangle "<b>03  上传</b>\n保存到阿里云 CAS" as upload #EFF6FF
+rectangle "<b>04  部署</b>\n更新 OSS / CDN" as deploy #EFF6FF
+rectangle "<b>05  通知</b>\n发送处理结果" as notify #ECFDF5
 
-while (还有待处理的域名？) is (是)
-  :读取 OSS / CDN 证书信息\n与本地证书、部署进度;
-  if (只读检查 / 预演？) then (是)
-    :输出签发、恢复部署或无需处理的计划;
-  else (否)
-    if (有可复用证书且部署未完成？) then (是)
-      :复用本地证书，恢复部署;
-    else (否)
-      if (达到续期条件或需要首次签发 / 强制签发？) then (是)
-        :准备证书\n复用符合条件的旧版证书\n或通过 Let's Encrypt + OSS HTTP-01 签发;
-        :持久化证书与部署进度;
-      else (否)
-        :记录证书正常;
-      endif
-    endif
-    if (有待部署的证书？) then (是)
-      :复用 CAS 证书记录或上传证书;
-      :按配置更新并核验 OSS 证书;
-      :按配置更新并核验\n已开启 HTTPS 的 CDN 证书;
-      note right
-        两个目标分别保存进度
-        一个失败仍会尝试另一个
-        已提交的更新先核验生效状态
-      end note
-      :保存处理结果\n按事件变化发送通知;
-    endif
-  endif
-endwhile (否)
-
-:汇总本轮结果\n单次 / 预演退出，常驻等待下一次巡检或重试;
-stop
+inspect --> prepare : 按需处理
+prepare --> upload
+upload --> deploy
+deploy --> notify
 @enduml
