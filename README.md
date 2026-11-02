@@ -23,8 +23,6 @@ go build -o oss-auto-cert ./cmd/oss-auto-cert
 修改生成的 `config.toml`，填写邮箱、已有 Bucket 与其已绑定的域名：
 
 ```toml
-version = 2
-
 [acme]
 email = "admin@example.com"
 

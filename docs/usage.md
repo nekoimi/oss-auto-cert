@@ -36,7 +36,7 @@ PowerShell 使用 `.\oss-auto-cert.exe` 调用后续命令；上述数据目录�
 - 指定 `--config` 时只读取该文件，不存在则报错。
 - 未指定时，先找 `/etc/oss-auto-cert/`，其次找当前目录，每处识别 `config.toml`、`config.yaml`、`config.yml`。
 - 同一位置存在多份标准配置时报错，要求显式指定。
-- `.toml` 要求 `version = 2`；`.yaml` / `.yml` 读取旧版，允许省略版本或 `version: 1`。
+- 按扩展名选择解析器：`.toml` 读取 TOML 配置，`.yaml` / `.yml` 读取旧 YAML 配置，无需配置版本字段。
 - 新版未知字段、错误类型及无效环境覆盖直接报错，不换解析器兜底。
 - 环境变量覆盖文件值；命令行只覆盖明确传入的对应选项。
 
@@ -60,6 +60,8 @@ PowerShell 使用 `.\oss-auto-cert.exe` 调用后续命令；上述数据目录�
 日志调试使用 `--log-level=debug`。生产与 staging 账户、证书和状态分开保存，但显式 staging 运行仍可能把测试证书部署到所选目标，应使用专用测试资源。
 
 日志字段、重定向、Docker 和 Systemd 示例见 [日志说明](logging.md)。应用日志写入 stderr，因此 `run >run.log` 不会保存运行日志，应使用 `2>run.log`。
+
+已有 TOML 文件若包含顶层 `version` 字段，删除该行即可；TOML 仍严格检查未知字段。
 
 ## 3. TOML 参数
 

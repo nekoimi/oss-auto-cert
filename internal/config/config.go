@@ -1,4 +1,4 @@
-// Package config 将旧 YAML 和 TOML v2 转换为统一运行配置。
+// Package config 根据文件扩展名将旧 YAML 和 TOML 转换为统一运行配置。
 package config
 
 import (

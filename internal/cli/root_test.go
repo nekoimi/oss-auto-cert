@@ -57,6 +57,17 @@ func TestInitValidateAndMigrate(t *testing.T) {
 	if code, _, err := execute("config", "init", "--output", path); code != 0 {
 		t.Fatal(err)
 	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated map[string]any
+	if err := toml.Unmarshal(raw, &generated); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := generated["version"]; exists {
+		t.Fatal("生成配置不应包含版本字段")
+	}
 	if code, _, _ := execute("config", "init", "--output", path); code != 2 {
 		t.Fatal("不应覆盖已有配置")
 	}
@@ -72,7 +83,7 @@ func TestInitValidateAndMigrate(t *testing.T) {
 	if code != 0 {
 		t.Fatal(stderr)
 	}
-	if !strings.Contains(body, "version = 2") || strings.Contains(body, "environment@example.com") || !strings.Contains(body, `domain-mode = 'first'`) && !strings.Contains(body, `domain-mode = "first"`) {
+	if strings.Contains(body, "version =") || strings.Contains(body, "environment@example.com") || !strings.Contains(body, `domain-mode = 'first'`) && !strings.Contains(body, `domain-mode = "first"`) {
 		t.Fatalf("迁移内容不正确: %s", body)
 	}
 	if code, _, err := execute("config", "validate", "--config", path); code != 0 {

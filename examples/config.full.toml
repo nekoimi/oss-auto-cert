@@ -1,5 +1,3 @@
-version = 2
-
 [storage]
 data-dir = "/var/lib/oss-auto-cert"
 

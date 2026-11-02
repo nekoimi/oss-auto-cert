@@ -1,6 +1,4 @@
 # 新版配置；凭证从 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET 读取。
-version = 2
-
 [acme]
 email = "admin@example.com"
 

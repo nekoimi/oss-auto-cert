@@ -159,7 +159,7 @@ type Service struct {
 - `internal/`: 内部实现
   - `cli/`: Cobra 命令、旧参数适配和输出；不使用全局 init 加载配置
   - `app/`: 用例组装、生命周期及退出码
-  - `config/`: TOML v2、旧 YAML 适配、覆盖和迁移；核心只消费统一 Config
+  - `config/`: TOML、旧 YAML 适配、覆盖和迁移；核心只消费统一 Config
   - `certificate/`: 证书计划、签发及逐目标部署恢复；不依赖具体 SDK 或 Cobra
   - `provider/aliyun/`: OSS/CDN/CAS 适配
   - `provider/acme/`: Let's Encrypt、账户和 HTTP-01 验证

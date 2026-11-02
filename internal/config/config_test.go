@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 func writeConfig(t *testing.T, name, content string) string {
@@ -28,8 +30,7 @@ buckets:
   - name: my-bucket
     endpoint: oss-cn-hangzhou.aliyuncs.com
 `
-const tomlExample = `version = 2
-[acme]
+const tomlExample = `[acme]
 email = "admin@example.com"
 [schedule]
 run-on-start = false
@@ -54,6 +55,13 @@ func TestLegacyMigrationAndEnvironment(t *testing.T) {
 	raw, err := Encode(r.Config)
 	if err != nil {
 		t.Fatal(err)
+	}
+	var document map[string]any
+	if err := toml.Unmarshal(raw, &document); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := document["version"]; exists {
+		t.Fatal("迁移配置不应包含版本字段")
 	}
 	migrated, err := Load(LoadOptions{Path: writeConfig(t, "config.toml", string(raw)), IgnoreEnv: true})
 	if err != nil {
@@ -83,7 +91,7 @@ func TestExplicitFalseAndStrictFields(t *testing.T) {
 	if r.Config.RunOnStart || r.Config.Buckets[0].DeployOSS {
 		t.Fatal("显式 false 被默认值覆盖")
 	}
-	for name, content := range map[string]string{"version": strings.Replace(tomlExample, "version = 2", "version = 3", 1), "unknown": strings.Replace(tomlExample, "version = 2", "version = 2\nunknown = true", 1), "duration": strings.Replace(tomlExample, "run-on-start = false", "run-on-start = false\ninterval = \"0s\"", 1), "domain": strings.ReplaceAll(tomlExample, "static.example.com", "../escape"), "duplicate": strings.Replace(tomlExample, `["static.example.com"]`, `["static.example.com", "STATIC.EXAMPLE.COM"]`, 1), "empty": strings.Replace(tomlExample, `["static.example.com"]`, `[]`, 1)} {
+	for name, content := range map[string]string{"unknown": "unknown = true\n" + tomlExample, "duration": strings.Replace(tomlExample, "run-on-start = false", "run-on-start = false\ninterval = \"0s\"", 1), "domain": strings.ReplaceAll(tomlExample, "static.example.com", "../escape"), "duplicate": strings.Replace(tomlExample, `["static.example.com"]`, `["static.example.com", "STATIC.EXAMPLE.COM"]`, 1), "empty": strings.Replace(tomlExample, `["static.example.com"]`, `[]`, 1)} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := Load(LoadOptions{Path: writeConfig(t, "config.toml", content), IgnoreEnv: true}); err == nil {
 				t.Fatal("无效配置未拒绝")
@@ -128,5 +136,36 @@ func TestDiscoverAndLegacyBoundaries(t *testing.T) {
 	r, err := Load(LoadOptions{Path: writeConfig(t, "old.yml", legacyExample+"unknown: ignored\n"), IgnoreEnv: true})
 	if err != nil || len(r.Warnings) == 0 {
 		t.Fatalf("旧未知字段应警告: %v", err)
+	}
+}
+
+func TestConfigurationFormatByExtension(t *testing.T) {
+	for _, tc := range []struct {
+		name, content, mode string
+		valid               bool
+	}{
+		{"config.toml", tomlExample, "listed", true},
+		{"config.TOML", tomlExample, "listed", true},
+		{"config.yaml", legacyExample, "first", true},
+		{"config.yml", legacyExample, "first", true},
+		{"renamed.toml", legacyExample, "", false},
+		{"renamed.yaml", tomlExample, "", false},
+		{"config.json", tomlExample, "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			loaded, err := Load(LoadOptions{Path: writeConfig(t, tc.name, tc.content), IgnoreEnv: true})
+			if !tc.valid {
+				if err == nil {
+					t.Fatal("配置格式不匹配时不应尝试其他解析器")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if loaded.Config.Buckets[0].DomainMode != tc.mode {
+				t.Fatal("未按扩展名应用配置策略")
+			}
+		})
 	}
 }

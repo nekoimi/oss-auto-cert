@@ -268,9 +268,7 @@ func Main() int {
 	return Execute(ctx, os.Args[1:], os.Stdout, os.Stderr)
 }
 
-const minimalConfig = `# oss-auto-cert TOML v2；凭证使用 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET
-version = 2
-
+const minimalConfig = `# oss-auto-cert TOML 配置；凭证使用 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET
 [acme]
 email = "admin@example.com"
 

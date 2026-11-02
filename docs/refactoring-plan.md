@@ -27,7 +27,7 @@
 
 | 本轮交付 | 后续扩展 |
 | --- | --- |
-| TOML v2 与旧 YAML 兼容适配 | ZeroSSL、Google Public CA、自定义 CA |
+| TOML 与旧 YAML 兼容适配 | ZeroSSL、Google Public CA、自定义 CA |
 | Let's Encrypt 生产与测试环境分离 | 多 CA 自动切换及 EAB 管理 |
 | OSS HTTP-01 验证 | 阿里云 DNS-01、通配符证书 |
 | 每个域名单独签发、多个域名分别管理 | 多域名合并为一张 SAN 证书 |
@@ -66,14 +66,14 @@
 ```text
 旧 YAML → LegacyConfig → LegacyAdapter ──┐
                                         ├→ 配置草稿 → 环境与参数覆盖
-新 TOML → TOMLConfigV2 → TOMLAdapter ─────┘
+新 TOML → TOMLConfig → TOMLAdapter ─────┘
         → 补全默认值 → 校验与归一化 → Config → 核心业务
 ```
 
 “合并到新配置对象”指将选中文件的显式配置覆盖到统一模型的默认值上，不是同时读取并混合两个配置文件。
 
 - `LegacyConfig` 只描述旧 YAML 的字段和读取行为。
-- `TOMLConfigV2` 只描述新版文件格式。
+- `TOMLConfig` 只描述新版文件格式。
 - 解析用结构需要保留字段是否出现的信息，例如指针或显式 optional 类型。
 - 不能通过“值是否为零”判断是否填写，尤其是 `false`、`0` 和空数组。
 - `Config` 保存已解析的时长、续期策略、域名选择策略和部署目标等运行参数。
@@ -81,13 +81,13 @@
 - 格式识别、兼容转换及历史默认值处理均在配置边界完成，核心业务不出现 `if legacy`。
 - 移除 `expiredEarlyDay` 等全局可变配置，加载过程不调用 `os.Exit` / `log.Fatal`。
 
-### 4.2 格式、版本与文件发现
+### 4.2 格式识别与文件发现
 
 1. 显式传入 `-config` / `--config` 时，只读取指定文件；文件不存在直接报错，不回退搜索。
-2. `.toml` 使用新版解析器，要求 `version = 2`。
-3. `.yaml` / `.yml` 使用旧版解析器，接受省略版本或 `version: 1`。
-4. 暂不接受 v2 YAML、v1 TOML、未知版本和未知扩展名，给出明确错误。
-5. TOML 解析失败不得尝试 YAML，版本错误不得按旧格式兜底。
+2. `.toml` 使用 TOML 解析器，不设置 `version` 字段。
+3. `.yaml` / `.yml` 使用旧 YAML 解析器，沿用旧字段和兼容规则，不通过版本字段选择解析器。
+4. 两种格式各自只接受对应字段结构；不支持的扩展名直接报错，不按内容猜测格式。
+5. TOML 解析或字段校验失败不得尝试 YAML；重命名扩展名不能代替配置迁移。
 6. 未指定路径时，先检查默认配置目录 `/etc/oss-auto-cert/`，其次检查当前工作目录；每个位置识别三个标准文件名。
 7. 每个位置中若发现多个标准配置文件，停止并提示显式指定路径；高优先级位置有唯一配置时，不再读取低优先级位置。
 8. 非 Linux 平台可以显式指定任意配置路径；本轮不新增另一套隐式系统配置路径。
@@ -133,7 +133,7 @@
 
 兼容输入与管理范围，不保留 panic、无效 JSON、错误权限、重复注册和失败不重试等缺陷。日期计算改为按证书真实 `NotAfter` 判断，属于修复；迁移报告需要说明可能出现的巡检时点差异。
 
-`DEBUG=true` 在旧 YAML 中仍映射为 staging 和强制续期，启动时显著提示，测试数据写入独立命名空间。TOML v2 不再解释 `DEBUG`；发现其值为 `true` 时仅提示明确替代项：`acme.environment = "staging"` 和 `run --once --force`。新版调试日志使用 `--log-level=debug`。
+`DEBUG=true` 在旧 YAML 中仍映射为 staging 和强制续期，启动时显著提示，测试数据写入独立命名空间。TOML 不再解释 `DEBUG`；发现其值为 `true` 时仅提示明确替代项：`acme.environment = "staging"` 和 `run --once --force`。新版调试日志使用 `--log-level=debug`。
 
 ### 4.5 配置迁移
 
@@ -150,13 +150,11 @@ oss-auto-cert config migrate -config=config.yaml -output=config.toml
 - 使用非敏感的配置归一化结果验证迁移前后策略等价。
 - 不注册 ACME 账户、不读取云端资源、不改变证书或运行状态。
 
-## 5. TOML v2 配置合同
+## 5. TOML 配置合同
 
 ### 5.1 最小配置
 
 ```toml
-version = 2
-
 [acme]
 email = "admin@example.com"
 
@@ -171,8 +169,6 @@ domains = ["static.example.com"]
 ### 5.2 完整配置示例
 
 ```toml
-version = 2
-
 [storage]
 data-dir = "/var/lib/oss-auto-cert"
 
@@ -219,7 +215,6 @@ events = ["updated", "failed", "recovered"]
 
 | 字段 | 默认值 / 校验规则 |
 | --- | --- |
-| `version` | 必须显式为 `2` |
 | `storage.data-dir` | `/var/lib/oss-auto-cert`，执行写操作时须可写 |
 | `schedule.interval` | `6h`，正的 Go duration 字符串；不使用 cron 表达式 |
 | `schedule.run-on-start` | `true`，显式 `false` 必须生效；只影响常驻运行 |
@@ -473,7 +468,7 @@ Cobra / pflag 不原生兼容旧标准 flag 包的多字母单横线参数，必
 | 阶段 | 交付内容 | 验收门槛 |
 | --- | --- | --- |
 | P1：兼容基线 | 旧 YAML、环境覆盖、启动参数、文件样例；隔离真实云测试 | 能精确说明旧配置的实际行为，测试不接触生产资源 |
-| P2：配置与 CLI | 新目录布局、Cobra 命令树、双构建入口、统一模型、TOML v2、旧适配器及配置工具 | YAML 与迁移 TOML 的有效策略等价，旧参数正确转换，帮助及离线命令无网络副作用 |
+| P2：配置与 CLI | 新目录布局、Cobra 命令树、双构建入口、统一模型、TOML、旧适配器及配置工具 | YAML 与迁移 TOML 的有效策略等价，旧参数正确转换，帮助及离线命令无网络副作用 |
 | P3：存储与适配 | 账户复用、证书存储、旧文件导入、锁、云服务接口 | 非 root 可保存，秘密不泄漏，写入中断可恢复，staging 与 production 隔离 |
 | P4：执行核心 | 发现、计划、签发、CAS 上传、独立部署、重试和取消 | OSS 成功 / CDN 失败后重启，仅恢复 CDN，不重复签发 |
 | P5：体验与交付 | 通知、只读检查、状态、Docker、CI、迁移和回退文档 | 全部验收项通过，标签产物、镜像架构和挂载路径正确 |
@@ -485,7 +480,7 @@ Cobra / pflag 不原生兼容旧标准 flag 包的多字母单横线参数，必
 ### 13.1 配置及兼容
 
 - 现有 `simple-config.yaml` 的字段结构、README 与使用文档中的有效示例均有固定样例。
-- 覆盖字段省略、显式 `false`、空列表、无效覆盖值、未知字段、未知版本和格式错误。
+- 覆盖字段省略、显式 `false`、空列表、无效覆盖值、未知字段、不支持的扩展名和格式错误。
 - 覆盖 YAML 中 0、负数、小于 15 的续期配置，以及对应环境覆盖后的旧规则。
 - 验证旧启动命令、TOML 新命令、单 / 双横线、参数位置及重复参数。
 - Cobra 命令测试覆盖无子命令默认运行、未知子命令拒绝、`--help` / `-help` / `version` / `--version` 离线执行，以及连续构造命令时参数状态不泄漏。

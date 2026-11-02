@@ -17,7 +17,6 @@ import (
 
 // Document 是 TOML 文件模型，指针区分省略与零值。
 type Document struct {
-	Version int `toml:"version"`
 	Storage struct {
 		DataDir *string `toml:"data-dir,omitempty"`
 	} `toml:"storage"`
@@ -62,7 +61,6 @@ type BucketDocument struct {
 
 // LegacyConfig 仅用于旧 YAML 解析。
 type LegacyConfig struct {
-	Version    int    `yaml:"version"`
 	Webhook    string `yaml:"webhook"`
 	WebhookTpl string `yaml:"webhook-tpl"`
 	ACME       struct {
@@ -104,9 +102,6 @@ func Load(o LoadOptions) (Result, error) {
 		if err := toml.NewDecoder(bytes.NewReader(raw)).DisallowUnknownFields().Decode(&d); err != nil {
 			return result, fmt.Errorf("TOML 配置解析失败: %w", err)
 		}
-		if d.Version != 2 {
-			return result, fmt.Errorf("TOML 配置要求 version = 2")
-		}
 		if err := applyDocument(&c, d); err != nil {
 			return result, err
 		}
@@ -125,9 +120,6 @@ func Load(o LoadOptions) (Result, error) {
 		strict.KnownFields(true)
 		if err := strict.Decode(&LegacyConfig{}); err != nil {
 			result.Warnings = append(result.Warnings, "旧 YAML 含未知字段，已兼容忽略，请检查迁移结果")
-		}
-		if d.Version != 0 && d.Version != 1 {
-			return result, fmt.Errorf("YAML 只支持旧版 version: 1 或省略版本")
 		}
 		c.ACME.Email = d.ACME.Email
 		if d.ACME.DataDir != "" {
@@ -191,7 +183,7 @@ func Load(o LoadOptions) (Result, error) {
 				c.Force = true
 				result.Warnings = append(result.Warnings, "旧 DEBUG=true：使用 staging 并强制续期，请勿用于生产")
 			} else {
-				result.Warnings = append(result.Warnings, "TOML v2 忽略 DEBUG，请使用 --log-level=debug；测试需显式选择 staging")
+				result.Warnings = append(result.Warnings, "TOML 忽略 DEBUG，请使用 --log-level=debug；测试需显式选择 staging")
 			}
 		}
 	}
@@ -199,7 +191,7 @@ func Load(o LoadOptions) (Result, error) {
 		return result, err
 	}
 	if !legacy && len(c.Buckets) == 0 {
-		return result, fmt.Errorf("新版配置至少需要一个 Bucket")
+		return result, fmt.Errorf("TOML 配置至少需要一个 Bucket")
 	}
 	result.Config = c
 	return result, nil
@@ -300,12 +292,12 @@ func applyDocument(c *Config, d Document) error {
 // Encode 导出显式策略，不读取环境变量。
 func Encode(c Config) ([]byte, error) {
 	if err := validate(&c, false); err != nil {
-		return nil, fmt.Errorf("无法转换为 TOML v2，请先调整旧配置: %w", err)
+		return nil, fmt.Errorf("无法转换为 TOML，请先调整旧配置: %w", err)
 	}
 	if len(c.Buckets) == 0 {
-		return nil, fmt.Errorf("TOML v2 要求至少一个 Bucket，请补充后迁移")
+		return nil, fmt.Errorf("TOML 要求至少一个 Bucket，请补充后迁移")
 	}
-	d := Document{Version: 2}
+	var d Document
 	d.Storage.DataDir = &c.DataDir
 	interval := c.Interval.String()
 	d.Schedule.Interval = &interval
