@@ -16,6 +16,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/nekoimi/oss-auto-cert/internal/certificate"
 	"github.com/nekoimi/oss-auto-cert/internal/config"
 )
 
@@ -25,16 +26,15 @@ type Sender struct {
 	Client   *http.Client
 }
 
-// Render 渲染消息；旧模板保留 HTML 模板语义，新模板提供 json 函数。
-func Render(n config.Notification, message string) ([]byte, error) {
-	data := struct{ Message string }{message}
+// Render 渲染平台内置消息；自定义模板保留 .Message，JSON 模板提供 json 函数。
+func Render(n config.Notification, event certificate.Event) ([]byte, error) {
 	var payload []byte
 	switch n.Type {
-	case "wecom", "dingtalk":
-		payload, _ = json.Marshal(map[string]any{"msgtype": "text", "text": map[string]string{"content": message}})
-	case "feishu":
-		payload, _ = json.Marshal(map[string]any{"msg_type": "text", "content": map[string]string{"text": message}})
+	case "wecom", "dingtalk", "feishu":
+		return renderBuiltin(n.Type, event)
 	case "template", "legacy-template":
+		// 保持旧模板的数据结构和 .Message 原文，避免影响 YAML 迁移及现有 JSON 接口。
+		data := struct{ Message string }{event.Message}
 		var b bytes.Buffer
 		if n.Type == "legacy-template" {
 			t, err := htmltemplate.New("notification").Parse(n.Template)
@@ -67,7 +67,7 @@ func Render(n config.Notification, message string) ([]byte, error) {
 func ValidateTemplates(channels []config.Notification) []error {
 	var result []error
 	for index, n := range channels {
-		if _, err := Render(n, "测试消息\n包含\"引号\"、反斜杠\\和<中文>"); err != nil {
+		if _, err := Render(n, certificate.Event{Type: "updated", Message: "测试消息\n包含\"引号\"、反斜杠\\和<中文>"}); err != nil {
 			result = append(result, fmt.Errorf("通知渠道 %d: %w", index+1, err))
 		}
 	}
@@ -75,13 +75,13 @@ func ValidateTemplates(channels []config.Notification) []error {
 }
 
 // Send 发送事件，错误不会造成 panic，也不记录包含令牌的 URL。
-func (s *Sender) Send(ctx context.Context, event, message string) error {
+func (s *Sender) Send(ctx context.Context, event certificate.Event) error {
 	var failures []error
 	for index, n := range s.Channels {
-		if len(n.Events) > 0 && !slices.Contains(n.Events, event) {
+		if len(n.Events) > 0 && !slices.Contains(n.Events, event.Type) {
 			continue
 		}
-		raw, err := Render(n, message)
+		raw, err := Render(n, event)
 		if err != nil {
 			failures = append(failures, err)
 			continue

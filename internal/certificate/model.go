@@ -102,9 +102,16 @@ type Store interface {
 	ImportLegacy(string) (Resource, error)
 }
 
+// Event 描述域名处理结果，不包含凭证、私钥或 Webhook 地址。
+type Event struct {
+	Type, Bucket, Domain, Environment string
+	Message, OSSStatus, CDNStatus     string
+	NotAfter, OccurredAt              time.Time
+}
+
 // Notifier 发送聚合后的域名事件。
 type Notifier interface {
-	Send(context.Context, string, string) error
+	Send(context.Context, Event) error
 }
 
 // Result 描述一次域名任务的用户可见结果。

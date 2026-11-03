@@ -1,47 +1,141 @@
+# oss-auto-cert 完整配置示例
+# 复制为 config.toml，修改邮箱、Bucket、域名后执行 config validate。
+# 阿里云凭证通过 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET 提供，不写入 TOML。
+# 以下生效字段均显式填写默认值；示例邮箱、Bucket 和域名需自行替换。
+# 配置值不会展开 ${环境变量}，请使用文档中支持的覆盖变量或 url-env。
+
+# ---------- 数据存储 ----------
 [storage]
+# 默认 /var/lib/oss-auto-cert；必须可写且持久化。
+# ACME_DATA_DIR 可覆盖；Compose 将此变量固定为容器内数据卷路径。
+# Windows 本地运行可改为 "./certs"。
 data-dir = "/var/lib/oss-auto-cert"
 
+# ---------- 巡检与续期 ----------
 [schedule]
+# 默认 6h；使用正的 Go 时长，如 "30m"、"6h"、"24h"，不支持 "1d"。
 interval = "6h"
+# 默认 true；false 表示常驻启动后等待一个巡检周期。
+# run --once / --dry-run 仍立即执行一轮。
 run-on-start = true
 
 [renewal]
-before-days = 30
+# 默认 15；范围 1～60，按实际到期时刻计算；ACME_EXPIRED_EARLY 可覆盖。
+before-days = 15
 
+# ---------- 证书签发 ----------
 [acme]
+# 支持值：letsencrypt。
 provider = "letsencrypt"
+# 联系邮箱；也可通过 ACME_EMAIL 提供，执行签发前必须设置。
 email = "admin@example.com"
+# production 为正式证书，staging 为测试证书。
+# staging 仍会部署证书，应配合专用测试 Bucket / 域名使用。
 environment = "production"
+# 支持值：rsa2048。
 key-type = "rsa2048"
+# 默认 2m，单个域名签发的总超时，需大于 0。
 timeout = "2m"
 
+# ---------- 并发与超时 ----------
 [runtime]
+# 默认 2；范围 1～16；同一账户的 ACME 签发串行执行。
 workers = 2
+# 默认 30s，云 API / ACME 单次 HTTP 请求超时，需大于 0。
 request-timeout = "30s"
+# 默认 30s，收到退出信号后等待在途任务收尾的时间，需大于 0。
+# 容器停止宽限应大于此值；生产 Compose 默认 60s。
 shutdown-timeout = "30s"
 
+# ---------- Bucket 与域名 ----------
+# 每个 Bucket 使用一组 [[buckets]]，其 challenge / deploy 表紧随该 Bucket。
+# Bucket 必须已经存在，域名必须已经绑定；每个域名单独签发证书。
 [[buckets]]
 name = "my-bucket"
+# Bucket 所在地域的 OSS endpoint，可省略协议，默认使用 HTTPS。
 endpoint = "oss-cn-hangzhou.aliyuncs.com"
-domain-mode = "listed" # listed / all / first；all 会管理所有已绑定域名
+# listed（默认）：只管理 domains 指定域名；列表不能为空。
+# all：管理该 Bucket 全部已绑定域名；不能填写 domains。
+# first：仅管理 API 返回的第一个域名；不能填写 domains。
+domain-mode = "listed"
+# 可填写多个域名；不能在不同 Bucket 重复管理同一域名。
 domains = ["static.example.com", "images.example.com"]
+# 默认 false；域名尚未配置证书时设为 true，显式允许首次签发和部署。
+# 不会自动创建域名绑定，也不会为 CDN 开启 HTTPS。
 allow-initial-issuance = false
 
 [buckets.challenge]
+# 支持值：oss-http-01。
+# 公网 HTTP 的 /.well-known/acme-challenge/ 路径必须路由到该 Bucket。
+# 程序需能在该 Bucket 写入和删除验证文件；无需映射容器端口。
 type = "oss-http-01"
 
 [buckets.deploy]
+# 默认 true；false 不更新 OSS 的证书绑定，但仍使用 OSS 完成域名验证。
 oss = true
-cdn = "auto" # auto 仅更新已开启 HTTPS 的 CDN；off 完全禁用 CDN 查询及写入
+# auto（默认）：查询 CDN，仅更新已开启 HTTPS 的 CDN 域名。
+# off：完全禁用 CDN 查询与更新；仅用 OSS 时建议选择此值。
+# oss = false 时 cdn 必须为 auto，运行时需存在已开启 HTTPS 的 CDN 目标。
+cdn = "auto"
 
-# 不使用通知时删除整个 notifications 表。
-[[notifications]]
-type = "wecom"
-url-env = "CERT_WEBHOOK_URL"
-events = ["updated", "failed", "recovered"]
+# 第二个 Bucket 示例：管理它的全部已绑定域名，仅部署 OSS。
+# 取消以下整段注释后修改 Bucket 和 endpoint；all 模式不要添加 domains。
+# [[buckets]]
+# name = "another-bucket"
+# endpoint = "oss-cn-shanghai.aliyuncs.com"
+# domain-mode = "all"
+# allow-initial-issuance = false
+#
+# [buckets.challenge]
+# type = "oss-http-01"
+#
+# [buckets.deploy]
+# oss = true
+# cdn = "off"
 
-# 自定义格式：用 json 函数产生完整 JSON 字符串，不要在表达式外围加引号。
+# ---------- 通知（可选，默认不开启） ----------
+# 企业微信、钉钉、飞书已内置消息模板，仅需配置 type 和 url-env / url。
+# 模板自动展示事件标题、域名、Bucket、环境、到期时间和 OSS / CDN 部署状态。
+# 按需取消某组或多组的注释；每组 [[notifications]] 是独立渠道。
+# url-env 是运行时读取的环境变量名称，不是 Webhook 地址。
+# url 与 url-env 只能填写一个；推荐 url-env，避免令牌写入配置文件。
+# events 省略或设为 [] 时接收所有事件：
+# updated = 更新核验完成；failed = 处理失败；recovered = 失败后恢复。
+# 连续失败会去重，不会每次巡检重复通知。
+# Docker Compose 的 .env 用于变量替换，需在服务 environment 中显式传入通知变量。
+
+# 企业微信机器人
+# [[notifications]]
+# type = "wecom"
+# url-env = "CERT_WEBHOOK_URL"
+# events = ["updated", "failed", "recovered"]
+
+# 钉钉机器人（内置 Markdown）
+# [[notifications]]
+# type = "dingtalk"
+# url-env = "DINGTALK_WEBHOOK_URL"
+# events = ["updated", "failed", "recovered"]
+
+# 飞书机器人（内置状态卡片）
+# [[notifications]]
+# type = "feishu"
+# url-env = "FEISHU_WEBHOOK_URL"
+# events = ["updated", "failed", "recovered"]
+
+# 其他 HTTP JSON 服务才需要自定义模板；企业微信、钉钉、飞书无需填写模板。
+# 自定义 JSON Webhook：模板可使用 .Message，原有模板内容继续兼容。
+# json 函数输出含引号的完整 JSON 字符串，表达式外不要再加引号。
 # [[notifications]]
 # type = "template"
 # url-env = "CUSTOM_WEBHOOK_URL"
-# template = '''{"text": {{ json .Message }}}'''
+# template = '{"text": {{ json .Message }}}'
+# events = ["failed", "recovered"]
+
+# 直接填写地址的替代示例（真实地址可能含令牌，勿提交到公开仓库）：
+# [[notifications]]
+# type = "wecom"
+# url = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=replace-me"
+# events = ["failed"]
+
+# legacy-template 用于旧 YAML 的 webhook-tpl 迁移，沿用 HTML 模板语义。
+# 新配置自定义 JSON 请使用上面的 template 类型。

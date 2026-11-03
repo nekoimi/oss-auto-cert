@@ -16,21 +16,44 @@
 
 ### 1. 配置域名
 
-创建 `config.toml`，填写邮箱、已有 Bucket 和已绑定的域名：
+创建 `config.toml`，填写邮箱、已有 Bucket 和已绑定的域名。下面包含常用的巡检、续期和部署设置；所有参数及多 Bucket、通知示例见 [完整配置](examples/config.full.toml)。
 
 ```toml
+[storage]
+data-dir = "/var/lib/oss-auto-cert" # 证书与账户的持久化目录
+
+[schedule]
+interval = "6h"                  # 巡检间隔
+run-on-start = true              # 启动后立即巡检
+
+[renewal]
+before-days = 15                 # 提前续期天数，范围 1～60
+
 [acme]
 email = "admin@example.com"
+environment = "production"      # 正式证书
 
 [[buckets]]
 name = "my-bucket"
 endpoint = "oss-cn-hangzhou.aliyuncs.com"
+domain-mode = "listed"           # 只管理下面列出的已绑定域名
 domains = ["static.example.com"]
-# 域名尚未配置证书时，取消下一行注释以允许首次签发
-# allow-initial-issuance = true
+allow-initial-issuance = false   # 域名尚未绑定证书时改为 true
+
+[buckets.deploy]
+oss = true
+cdn = "auto"                    # 仅用 OSS 时改为 "off"，避免查询 CDN
+
+# 可选企业微信通知：已内置模板，仅需配置机器人地址
+# [[notifications]]
+# type = "wecom"
+# url-env = "CERT_WEBHOOK_URL"
+# events = ["updated", "failed", "recovered"]
 ```
 
 域名的 `http://域名/.well-known/acme-challenge/令牌` 必须能够通过公网访问，并指向对应 Bucket，以完成证书申请时的域名验证。所用阿里云账号需要具备 OSS、CAS 及相关 CDN 操作权限，详见 [部署与权限说明](docs/usage.md#8-docker权限与-systemd)。
+
+企业微信、钉钉和飞书均内置通知模板，无需自行编写消息内容。启用时取消对应配置注释，并在 Compose 服务中传入 `url-env` 对应的环境变量，步骤见 [通知设置](docs/usage.md#5-通知)。
 
 ### 2. 填写镜像和凭证
 

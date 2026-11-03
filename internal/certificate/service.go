@@ -163,7 +163,7 @@ func (s *Service) process(ctx context.Context, b config.Bucket, remote Remote, d
 				result.Fatal = true
 			}
 			if oldEvent != "failed" && s.Notifier != nil {
-				if err := s.Notifier.Send(ctx, "failed", fmt.Sprintf("%s：%s", remote.Domain, result.Message)); err != nil {
+				if err := s.notify(ctx, b, remote, state, "failed", fmt.Sprintf("%s：%s", remote.Domain, result.Message)); err != nil {
 					result.Message += "；通知失败: " + err.Error()
 				}
 			}
@@ -280,7 +280,7 @@ func (s *Service) process(ctx context.Context, b config.Bucket, remote Remote, d
 		state.Error = ""
 		state.Event = "normal"
 		if oldEvent == "failed" && s.Notifier != nil {
-			if err := s.Notifier.Send(ctx, "recovered", remote.Domain+"：检查已恢复正常"); err != nil {
+			if err := s.notify(ctx, b, remote, state, "recovered", remote.Domain+"：检查已恢复正常"); err != nil {
 				result.Message = "通知失败: " + err.Error()
 			}
 		}
@@ -307,11 +307,29 @@ func (s *Service) process(ctx context.Context, b config.Bucket, remote Remote, d
 	result.Action = "更新已核验"
 	result.Message = fmt.Sprintf("OSS=%s，CDN=%s", state.OSS.Status, state.CDN.Status)
 	if s.Notifier != nil {
-		if err := s.Notifier.Send(ctx, event, remote.Domain+"："+result.Message); err != nil {
+		if err := s.notify(ctx, b, remote, state, event, remote.Domain+"："+result.Message); err != nil {
 			result.Message += "；通知失败: " + err.Error()
 		}
 	}
 	return
+}
+
+func (s *Service) notify(ctx context.Context, b config.Bucket, remote Remote, state State, kind, message string) error {
+	notAfter := state.NotAfter
+	if notAfter.IsZero() {
+		notAfter = remote.NotAfter
+	}
+	oss, cdn := state.OSS.Status, state.CDN.Status
+	if !b.DeployOSS {
+		oss = "skipped"
+	}
+	if b.CDN == "off" {
+		cdn = "skipped"
+	}
+	return s.Notifier.Send(ctx, Event{
+		Type: kind, Bucket: b.Name, Domain: remote.Domain, Environment: s.Config.ACME.Environment,
+		Message: message, OSSStatus: oss, CDNStatus: cdn, NotAfter: notAfter, OccurredAt: s.now(),
+	})
 }
 
 func (s *Service) target(ctx context.Context, target *Target, verify func() (bool, error), apply func() error, save func() error) error {

@@ -65,7 +65,7 @@ PowerShell 使用 `.\oss-auto-cert.exe` 调用后续命令；上述数据目录�
 
 ## 3. TOML 参数
 
-最小示例见 [simple-config.toml](../simple-config.toml)，完整示例见 [config.full.toml](../examples/config.full.toml)。
+常用配置示例见 [simple-config.toml](../simple-config.toml)，`config init` 生成相同内容。所有字段的默认值、取值范围、多 Bucket 及通知用法见 [config.full.toml](../examples/config.full.toml)。复制完整示例后修改邮箱、Bucket 和域名即可校验；可选通知段默认注释，按需开启。
 
 | 配置 | 默认值及说明 |
 | --- | --- |
@@ -75,7 +75,7 @@ PowerShell 使用 `.\oss-auto-cert.exe` 调用后续命令；上述数据目录�
 | `renewal.before-days` | `15`，新版接受 1 至 60 天；依据真实到期时刻 |
 | `acme.email` | 联系邮箱，可由环境变量提供 |
 | `acme.environment` | `production`，测试使用 `staging` |
-| `acme.provider` / `acme.key-type` | 本轮仅 `letsencrypt` / `rsa2048` |
+| `acme.provider` / `acme.key-type` | `letsencrypt` / `rsa2048` |
 | `acme.timeout` | `2m`，每次签发期限 |
 | `runtime.workers` | `2`，1 至 16 个并发域名任务，签发按账户串行 |
 | `runtime.request-timeout` | `30s`，单次请求期限 |
@@ -131,6 +131,8 @@ Bucket 的选择与部署：
 
 ## 5. 通知
 
+企业微信、钉钉和飞书均提供内置消息模板，只需配置渠道和机器人地址，无需编写 `template`。
+
 ```toml
 [[notifications]]
 type = "wecom"
@@ -138,9 +140,51 @@ url-env = "CERT_WEBHOOK_URL"
 events = ["updated", "failed", "recovered"]
 ```
 
-在环境中设置 `CERT_WEBHOOK_URL`。内置 `wecom`、`dingtalk`、`feishu` 格式通过 JSON 编码生成消息。没有通知配置时，处理结果仍输出至本地。
+在环境中设置 `CERT_WEBHOOK_URL`。没有通知配置时，处理结果仍输出至本地。
 
-自定义模板：
+| 渠道 | `type` | 内置样式 |
+| --- | --- | --- |
+| 企业微信 | `wecom` | Markdown 通知 |
+| 钉钉 | `dingtalk` | 带标题的 Markdown 通知 |
+| 飞书 | `feishu` | 卡片，更新成功为绿色、失败为红色、恢复为青色 |
+
+内置模板按更新成功、处理失败和故障恢复分别显示标题，包含域名、Bucket、运行环境、证书到期时间、OSS / CDN 部署状态和处理说明。时间统一显示为 UTC；缺失的到期时间显示“未知”，尚未检查的部署目标显示“未检查”。部署恢复使用本地证书的到期时间，没有本地证书时使用已读取的 OSS 证书到期时间。
+
+示例正文：
+
+```text
+oss-auto-cert · 证书更新成功
+域名：static.example.com
+Bucket：my-bucket
+环境：生产环境
+证书到期：2027-02-01 10:00:00 UTC
+OSS 部署：已核验
+CDN 部署：已跳过
+通知时间：2026-11-03 10:00:00 UTC
+```
+
+| 字段 | 用法 |
+| --- | --- |
+| `type` | `wecom`、`dingtalk`、`feishu` 或 `template` |
+| `url-env` | 保存 Webhook 地址的环境变量名；推荐使用 |
+| `url` | 直接填写 HTTP(S) 地址；不能与 `url-env` 同时填写 |
+| `events` | `updated`、`failed`、`recovered`；省略或空列表表示全部事件 |
+| `template` | 仅自定义 `type = "template"` 时填写；三种内置渠道无需填写 |
+
+可以添加多组 `[[notifications]]`，分别发送到不同平台。完整示例包含每个平台的配置段。
+
+Docker Compose 部署时，在 `.env` 中填写 `CERT_WEBHOOK_URL=你的机器人地址`，并在现有服务的 `environment` 中增加这一行：
+
+```yaml
+services:
+  oss-auto-cert:
+    environment:
+      CERT_WEBHOOK_URL: ${CERT_WEBHOOK_URL:?请填写通知机器人地址}
+```
+
+这是对现有 Compose 配置的补充，保留原有的凭证、数据目录和挂载设置；修改后执行 `docker compose up -d` 使环境变量生效。仅填写 `.env` 不会自动将通知变量传入容器。使用其他渠道时替换为对应的 `url-env` 名称。
+
+仅在对接其他 HTTP JSON 服务、需要自定义报文时使用 `template`，原有模板继续支持 `.Message`：
 
 ```toml
 [[notifications]]

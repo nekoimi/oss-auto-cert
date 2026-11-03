@@ -131,7 +131,7 @@ func newRoot(out, errOut io.Writer, logger *logrus.Logger) *cobra.Command {
 	root.AddCommand(&cobra.Command{Use: "version", Short: "显示版本", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error { _, err := fmt.Fprintln(out, Version); return err }})
 	configCmd := &cobra.Command{Use: "config", Short: "配置生成、校验及迁移", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error { return cmd.Help() }}
 	var initOutput string
-	initCmd := &cobra.Command{Use: "init", Short: "生成最小 TOML 配置，不覆盖已有文件", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
+	initCmd := &cobra.Command{Use: "init", Short: "生成带注释的常用 TOML 配置，不覆盖已有文件", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
 		if err := exclusiveWrite(initOutput, []byte(minimalConfig)); err != nil {
 			return app.Invalid(err)
 		}
@@ -267,12 +267,39 @@ func Main() int {
 	return Execute(ctx, os.Args[1:], os.Stdout, os.Stderr)
 }
 
-const minimalConfig = `# oss-auto-cert TOML 配置；凭证使用 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET
+const minimalConfig = `# oss-auto-cert 常用配置
+# 阿里云凭证通过 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET 提供。
+# 全部字段及多 Bucket、通知示例：examples/config.full.toml
+
+[storage]
+# 账户、证书和部署进度的持久化目录；ACME_DATA_DIR 可覆盖此值。
+data-dir = "/var/lib/oss-auto-cert"
+
+[schedule]
+interval = "6h"              # 巡检间隔
+run-on-start = true          # 启动后立即巡检
+
+[renewal]
+before-days = 15             # 提前续期天数，范围 1～60；默认 15
+
 [acme]
-email = "admin@example.com"
+email = "admin@example.com"  # 替换为自己的联系邮箱；也可设置 ACME_EMAIL
 
 [[buckets]]
-name = "my-bucket"
+name = "my-bucket"           # 已存在的 Bucket
 endpoint = "oss-cn-hangzhou.aliyuncs.com"
+domain-mode = "listed"      # 只管理下面列出的、已绑定到 Bucket 的域名
 domains = ["static.example.com"]
+allow-initial-issuance = false # 域名尚未绑定证书时，改为 true 以允许首次签发
+
+[buckets.deploy]
+oss = true                  # 更新 OSS 域名证书
+cdn = "auto"                # 更新已开启 HTTPS 的 CDN；仅用 OSS 时改为 "off"
+
+# 可选企业微信通知：取消以下四行注释，并将机器人地址传入运行环境。
+# 已内置消息模板，无需编写 template；钉钉 / 飞书使用 dingtalk / feishu。
+# [[notifications]]
+# type = "wecom"
+# url-env = "CERT_WEBHOOK_URL"
+# events = ["updated", "failed", "recovered"]
 `
