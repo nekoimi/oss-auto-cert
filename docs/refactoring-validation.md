@@ -28,3 +28,5 @@ CI 工具链修复验证：Go 1.25.14 配合兼容的扫描工具可启动扫描
 操作与恢复方式见 [使用文档](usage.md)，设计边界见 [重构方案](refactoring-plan.md)。
 
 阿里云 ACR 清单兼容修复（2026-11-03）：发布工作流关闭 provenance / SBOM，并设置 `oci-mediatypes=false`。本地使用包含占位文件的最小镜像，以相同兼容选项导出多架构归档，检查结果为 Docker manifest list、amd64 / arm64 两份 Docker image manifest，以及 Docker image config；没有 OCI attestation 或 empty config。工作流 YAML 和差异格式检查通过；未向远端镜像仓库推送，实际 ACR 接收结果需重跑发布工作流验证。
+
+Release 标签修复（2026-11-03）：手动发布增加必填 `tag`，准备任务解析已有标签的提交，checks、构建和 Release 显式使用相同提交。使用临时 Git 仓库运行工作流中的实际 Bash 脚本，验证标签推送、从较新分支手动发布旧标签、附注预发布标签均解析正确；缺失标签、分支名、空输入、分支触发及带命令或换行的输入均被拒绝。修改的两个工作流通过 actionlint v1.7.12 检查（未启用 shellcheck / pyflakes）。未创建远端标签或 Release，远端运行结果待发布工作流验证。

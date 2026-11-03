@@ -300,3 +300,11 @@ README 流程图源码位于 [oss-auto-cert.puml](../oss-auto-cert.puml)，修�
 ```bash
 java -jar /path/to/plantuml.jar -charset UTF-8 -tsvg -o docs/images oss-auto-cert.puml
 ```
+
+## 10. 发布二进制
+
+推送 `v1.2.3` 形式的版本标签会触发 **Build & Release**，通过检查后构建并上传各平台二进制。
+
+手动发布时，在 GitHub Actions 中选择 **Build & Release → Run workflow**，在 `tag` 输入框填写已经推送的版本标签，例如 `v1.2.3`。工作流会校验标签并解析其提交；测试、漏洞扫描、二进制构建和 Release 附件均使用这一提交。分支名、空标签和不存在的标签会在准备阶段报错，不会自动创建标签。
+
+修改发布工作流后，手动运行时应选择包含修复的工作流分支；`tag` 仍填写待发布标签。仅重新运行旧的失败任务会使用旧工作流，不能应用这次修复。

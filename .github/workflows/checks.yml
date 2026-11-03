@@ -4,6 +4,12 @@ on:
   push:
     branches: [master, dev]
   workflow_call:
+    inputs:
+      ref:
+        description: "待检查的提交，默认使用触发工作流的提交"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -16,6 +22,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: actions/setup-go@v7
         with:
           go-version: "1.26.x"
@@ -30,6 +38,8 @@ jobs:
       GOTOOLCHAIN: local
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: actions/setup-go@v7
         with:
           go-version: "1.26.x"

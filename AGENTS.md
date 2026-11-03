@@ -233,6 +233,7 @@ Compose 使用 `.env.example` 中的 `OSS_AUTO_CERT_IMAGE` 指定固定镜像；
 - `.github/workflows/checks.yml`：Linux / Windows 竞态测试、vet、命令入口构建及漏洞扫描，Go 采用 1.26 系列最新补丁，与二进制和 Docker 发布构建保持一致。
 - 漏洞扫描使用要求 Go 1.26 的 `govulncheck v1.9.0`，扫描任务设置 `GOTOOLCHAIN=local`；升级工具时先核对其最低 Go 版本。
 - `.github/workflows/release-binaries.yaml`：标签或手动触发，构建 Linux / Windows / macOS 的 amd64、arm64 二进制。
+- 手动发布二进制时必须填写已推送的 `tag`（如 `v1.2.3`）；准备任务解析标签提交，checks、构建和 Release 使用相同提交，并显式传入发布标签。
 - `.github/workflows/release-docker.yml`：标签或手动触发，构建 linux/amd64、linux/arm64 镜像并发布到 Docker Hub、GHCR 和阿里云镜像仓库。
 - 阿里云 ACR 发布使用 `provenance: false`、`sbom: false` 和 `oci-mediatypes=false`，避免仓库拒绝 OCI attestation 的 `application/vnd.oci.empty.v1+json`；保留多架构清单。
 - `.github/workflows/dev-docker.yaml`：dev 分支开发镜像发布。发布工作流均依赖 checks，不固定检出其他分支。
