@@ -26,3 +26,5 @@ CI 工具链修复验证：Go 1.25.14 配合兼容的扫描工具可启动扫描
 没有运行真实 CA 注册 / 签发、OSS 写入、CAS 上传或 CDN 更新。云 API 权限、真实 HTTP-01 路由和 CDN 边缘传播仍需使用专用测试资源验收。当前 CAS 上传结果无法确定且查询不到记录时会暂停并提示人工核对，尚无人工状态修复命令。
 
 操作与恢复方式见 [使用文档](usage.md)，设计边界见 [重构方案](refactoring-plan.md)。
+
+阿里云 ACR 清单兼容修复（2026-11-03）：发布工作流关闭 provenance / SBOM，并设置 `oci-mediatypes=false`。本地使用包含占位文件的最小镜像，以相同兼容选项导出多架构归档，检查结果为 Docker manifest list、amd64 / arm64 两份 Docker image manifest，以及 Docker image config；没有 OCI attestation 或 empty config。工作流 YAML 和差异格式检查通过；未向远端镜像仓库推送，实际 ACR 接收结果需重跑发布工作流验证。

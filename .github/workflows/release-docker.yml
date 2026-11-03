@@ -16,8 +16,6 @@ jobs:
     permissions:
       packages: write
       contents: read
-      attestations: write
-      id-token: write
     steps:
       - name: Check out the repo
         uses: actions/checkout@v7
@@ -68,6 +66,10 @@ jobs:
         with:
           context: .
           push: true
+          # 阿里云 ACR 不兼容 OCI attestation 的 empty config，使用 Docker 清单格式。
+          provenance: false
+          sbom: false
+          outputs: type=image,oci-mediatypes=false
           platforms: linux/amd64,linux/arm64
           build-args: VERSION=${{ github.ref_name }}
           tags: ${{ steps.meta.outputs.tags }}
